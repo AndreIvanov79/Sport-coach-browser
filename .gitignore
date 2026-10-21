@@ -1,0 +1,7 @@
+node_modules/
+dist/
+artifacts/
+public/vendor/
+public/models/
+work/
+*.log
