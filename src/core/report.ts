@@ -1,46 +1,53 @@
-import { profiles } from '../profiles.ts';
-import type { Finding, Report, Sample, Sport } from '../types.ts';
-import { detectCycles, metricsFor, percentile } from './metrics.ts';
-export function makeReport(input:{sport:Sport;exercise:string;fileName:string;samples:Sample[];fps:number;threshold:number;elapsedMs:number;duration:number;interrupted?:boolean}):Report {
- const profile=profiles[input.sport],metrics=metricsFor(input.samples,profile.metrics,input.threshold);
- const exercise=profile.exercises.find(x=>x.id===input.exercise)??profile.exercises.find(x=>x.id==='free')!;
- const eligible=metrics.filter(m=>m.value!==null&&(!exercise.driver||m.id.toLowerCase().includes(exercise.driver)));
- const driver=exercise.driver?eligible.sort((a,b)=>(b.max!-b.min!)-(a.max!-a.min!))[0]:undefined;
- const cycles=driver?detectCycles(driver.series,input.samples.map(s=>s.time),exercise.inverted??false):[];
- const coverage=input.samples.length?input.samples.filter((_,i)=>metrics.some(m=>m.series[i]!==null)).length/input.samples.length:0;
- const findings:Finding[]=[];
- if(coverage<.6)findings.push({tone:'attention',title:'Недостаточно видимых точек',detail:'Большую часть ролика нельзя уверенно измерить. Повторите запись с полным телом в кадре и хорошим освещением.'});
- else findings.push({tone:'good',title:'Есть материал для разбора',detail:'Хотя бы одна метрика доступна на '+Math.round(coverage*100)+'% выбранных кадров. Покрытие каждого угла указано отдельно.'});
- const ambiguous=input.samples.filter(s=>s.reason==='multiple-people').length;
- if(ambiguous)findings.push({tone:'attention',title:'В кадре несколько человек',detail:ambiguous+' кадров исключены: приложение не смешивает точки разных спортсменов. Запишите одного человека.'});
- if(driver&&cycles.length){
-  const median=percentile(cycles.map(c=>c.end-c.start),.5);
-  findings.push({tone:'info',title:cycles.length+' полных циклов движения',detail:driver.label+': медианная длительность '+median.toFixed(2)+' с. Это циклы выбранного сустава в наблюдаемых кадрах; незавершённые и пропущенные движения не включены.',time:cycles[0].peak});
-  if(cycles.length>=3){
-   const durations=cycles.map(c=>c.end-c.start);
-   if(percentile(durations,.9)/Math.max(.1,percentile(durations,.1))>1.5)findings.push({tone:'attention',title:'Темп меняется',detail:'Длительности наблюдаемых циклов заметно различаются. Просмотрите отмеченные фазы и сравните, было ли изменение темпа намеренным.',time:cycles[cycles.length-1].peak});
-  }
- }else if(exercise.driver)findings.push({tone:'info',title:'Полный цикл не подтверждён',detail:'Для счёта нужен видимый переход из исходной позиции в противоположную фазу и обратно. Отсутствие подтверждённых циклов не означает отсутствие движения.'});
- if(input.sport==='boxing'){
-  const guard=metrics.find(m=>m.id==='guard');
-  if(guard&&guard.value!==null){
-   const index=guard.series.findIndex(v=>v!==null&&v>.5);
-   if(index>=0)findings.push({tone:'attention',title:'Проверьте положение кисти',detail:'В отмеченном кадре хотя бы одна кисть находится ниже своего плеча более чем на половину длины корпуса в проекции. Это повод пересмотреть фазу движения, а не автоматический вывод об ошибке защиты.',time:input.samples[index].time});
-  }
- }
- if(input.sport==='rg'){
-  const split=metrics.find(m=>m.id==='split');
-  if(split&&split.max!==null){
-   let index=0; for(let i=1;i<split.series.length;i++)if((split.series[i]??-1)>(split.series[index]??-1))index=i;
-   findings.push({tone:'info',title:'Посмотрите максимальное раскрытие',detail:'Устойчивый верхний уровень раскрытия — '+split.max.toFixed(0)+'° в плоскости кадра. Ракурс влияет на значение; оно не подтверждает шпагат или трудность элемента.',time:input.samples[index].time});
-  }
- }
- const worst=metrics.filter(m=>m.coverage<.6);
- if(worst.length&&coverage>=.6)findings.push({tone:'attention',title:'Часть измерений недоступна',detail:worst.map(m=>m.label).join(', ')+': недостаточно надёжных кадров. Значения не восстанавливаются из соседних точек.'});
- return {...input,interrupted:!!input.interrupted,version:1,id:crypto.randomUUID(),createdAt:new Date().toISOString(),model:'MediaPipe Pose Landmarker Lite / float16 / v1',metrics,findings,cycles,coverage,driver:driver?.id??null};
+import { normalizeExercise, profiles } from "../profiles.ts";
+import type { Finding, ModelId, Report, Sample, Seed, Sport } from "../types.ts";
+import { bodyCoverage, buildBody, reliability } from "./body.ts";
+import { metricsFor } from "./series.ts";
+import { activitySegments } from "./segments.ts";
+import { classifyView } from "./view.ts";
+import { trackAthlete } from "./track.ts";
+import type { SportContext, SportResult } from "./findings.ts";
+import { analyzeFitness } from "../sports/fitness.ts";
+import { analyzeBoxing } from "../sports/boxing.ts";
+import { analyzeRg } from "../sports/rg.ts";
+export const MODEL_NAMES: Record<ModelId, string> = { lite: "MediaPipe Pose Landmarker Lite / float16 / v1", full: "MediaPipe Pose Landmarker Full / float16 / v1", heavy: "MediaPipe Pose Landmarker Heavy / float16 / v1" };
+export type ReportInput = {
+ sport: Sport; exercise: string; fileName: string; samples: Sample[]; fps: number; threshold: number; elapsedMs: number; duration: number;
+ interrupted?: boolean; modelId?: ModelId; source?: Report["source"]; seed?: Seed; decode?: string; fileSize?: number; fileModified?: number;
+ id?: string; createdAt?: string; processedDuration?: number;
+};
+const analyzers: Record<Sport, (c: SportContext) => SportResult> = { fitness: analyzeFitness, boxing: analyzeBoxing, rg: analyzeRg };
+export function makeReport(input: ReportInput): Report {
+ const profile = profiles[input.sport], exercise = normalizeExercise(input.sport, input.exercise);
+ const { samples, athlete } = trackAthlete(input.samples, input.seed);
+ const body = buildBody(samples, input.threshold);
+ const metrics = metricsFor(body, profile.metrics);
+ const view = classifyView(body), segments = activitySegments(body);
+ const duration = input.duration;
+ const result = analyzers[input.sport]({ body, metrics, exercise, profile, view, segments, duration, samples });
+ const coverage = bodyCoverage(body), rel = reliability(body), findings: Finding[] = [];
+ if (input.interrupted) findings.push({ code: "interrupted", tone: "attention", kind: "quality", params: { seconds: Math.round((input.processedDuration ?? samples[samples.length - 1]?.time ?? 0) * 10) / 10, total: Math.round(duration * 10) / 10 } });
+ if (coverage < .6) findings.push({ code: "low_coverage", tone: "attention", kind: "quality", params: { pct: Math.round(coverage * 100) } });
+ else findings.push({ code: "coverage_ok", tone: "good", kind: "quality", params: { pct: Math.round(coverage * 100) } });
+ if (athlete.people > 1) findings.push({ code: athlete.selection === "user" ? "athlete_user" : "athlete_auto", tone: "info", kind: "quality", time: athlete.seedTime, params: { people: athlete.people, lost: athlete.lostFrames } });
+ if (body.bridged) findings.push({ code: "bridged", tone: "info", kind: "quality", params: { count: body.bridged } });
+ if (rel.frames && rel.suspectShare > .15) findings.push({ code: "suspect_geometry", tone: "attention", kind: "quality", params: { pct: Math.round(rel.suspectShare * 100) } });
+ const weak = metrics.filter(m => m.coverage < .6 && profile.tableMetrics.includes(m.id));
+ if (weak.length && coverage >= .6) findings.push({ code: "metrics_unavailable", tone: "attention", kind: "quality", params: { ids: weak.map(m => m.id).join(",") } });
+ if (view.kind !== "unknown") findings.push({ code: "view_" + view.kind, tone: "info", kind: "quality" });
+ return {
+  version: 2, id: input.id ?? crypto.randomUUID(), createdAt: input.createdAt ?? new Date().toISOString(), sport: input.sport, exercise,
+  fileName: input.fileName, fileSize: input.fileSize, fileModified: input.fileModified, duration, fps: input.fps, threshold: input.threshold,
+  modelId: input.modelId ?? "lite", model: MODEL_NAMES[input.modelId ?? "lite"], source: input.source ?? "file", decode: input.decode,
+  samples, metrics, scalars: result.scalars, findings: [...result.findings, ...findings], cycles: result.cycles, segments: result.segments ?? segments,
+  coverage, driver: result.driver, view, athlete, exerciseInfo: result.exerciseInfo, reps: result.reps, strikes: result.strikes, rg: result.rg,
+  reliability: rel, elapsedMs: input.elapsedMs, interrupted: !!input.interrupted, processedDuration: input.processedDuration
+ };
 }
-
-// Reuse saved landmarks; only an explicit Save changes stored reports.
-export function refreshReport(report:Report):Report {
- return {...makeReport(report),id:report.id,createdAt:report.createdAt,model:report.model};
+/** Re-derive all measurements from stored landmarks (code/threshold updates); identity and source are kept. */
+export function refreshReport(report: Report | (Partial<Report> & { samples: Sample[]; sport: Sport })): Report {
+ const r = report as Report;
+ const modelId: ModelId = r.modelId ?? (/heavy/i.test(r.model ?? "") ? "heavy" : /full/i.test(r.model ?? "") ? "full" : "lite");
+ return makeReport({ sport: r.sport, exercise: r.exercise ?? "auto", fileName: r.fileName ?? "", samples: r.samples, fps: r.fps, threshold: r.threshold ?? .65,
+  elapsedMs: r.elapsedMs ?? 0, duration: r.duration, interrupted: r.interrupted, modelId, source: r.source ?? "file", decode: r.decode,
+  fileSize: r.fileSize, fileModified: r.fileModified, id: r.id, createdAt: r.createdAt, processedDuration: r.processedDuration });
 }

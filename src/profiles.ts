@@ -1,67 +1,49 @@
-import type { Profile, Sport } from './types.ts';
+import type { Profile, Sport } from "./types.ts";
 // Joint and head measurements stay available regardless of movement category.
-const bodyMetrics = ['leftShoulder','rightShoulder','leftElbow','rightElbow','leftHip','rightHip','leftKnee','rightKnee','trunk','headTilt','headShift','headHeight'];
+const body = ["leftShoulder", "rightShoulder", "leftElbow", "rightElbow", "leftHip", "rightHip", "leftKnee", "rightKnee", "trunk", "headTilt", "headShift", "headHeight"];
 export const profiles: Record<Sport, Profile> = {
  fitness: {
-  id:'fitness',name:'Fitness Coach',title:'Увидеть движение.\nПонять технику.',
-  subtitle:'Разберите тренировку по кадрам: амплитуда, темп и полные циклы движения.',
-  tag:'СТУДИЯ ДВИЖЕНИЯ',accent:'#c6ef73',defaultFps:15,
-  exercises:[
-   {id:'free',label:'Свободное движение',driver:null},
-   {id:'squat',label:'Приседания',driver:'knee'},
-   {id:'lunge',label:'Выпады и зашагивания',driver:'knee'},
-   {id:'pull',label:'Тяги руками',driver:'elbow'},
-   {id:'hinge',label:'Становые тяги и наклоны',driver:'hip'},
-   {id:'press',label:'Жимы',driver:'elbow',inverted:true},
-   {id:'pushup',label:'Отжимания и брусья',driver:'elbow'},
-   {id:'pullup',label:'Подтягивания',driver:'elbow'},
-   {id:'curl',label:'Сгибания рук',driver:'elbow'},
-   {id:'extension',label:'Разгибания рук',driver:'elbow',inverted:true},
-   {id:'raise',label:'Подъёмы и разведения рук',driver:'shoulder',inverted:true},
-   {id:'leg',label:'Сгибания и разгибания ног',driver:null},
-   {id:'calf',label:'Подъёмы на носки',driver:null},
-   {id:'core',label:'Упражнения на корпус',driver:null},
-   {id:'hold',label:'Статические удержания',driver:null}
+  id: "fitness", accent: "#c6ef73", defaultFps: 15,
+  exercises: [
+   { id: "auto", driver: null },
+   { id: "squat", driver: "knee", candidates: ["squat", "wall_sit", "leg_press"] },
+   { id: "lunge", driver: "knee", candidates: ["lunge", "split_squat"] },
+   { id: "hinge", driver: "hip", candidates: ["deadlift", "good_morning", "kettlebell_swing", "hyperextension"] },
+   { id: "pull", driver: "elbow", candidates: ["bent_over_row", "cable_row", "lat_pulldown"] },
+   { id: "pullup", driver: "elbow", candidates: ["pullup", "lat_pulldown"] },
+   { id: "press", driver: "elbow", inverted: true, candidates: ["overhead_press", "bench_press", "chest_press"] },
+   { id: "pushup", driver: "elbow", candidates: ["pushup", "dip"] },
+   { id: "curl", driver: "elbow", candidates: ["bicep_curl"] },
+   { id: "extension", driver: "elbow", inverted: true, candidates: ["tricep_pushdown"] },
+   { id: "raise", driver: "shoulder", inverted: true, candidates: ["lateral_raise", "front_raise"] },
+   { id: "leg", driver: "knee", candidates: ["leg_extension", "leg_curl", "leg_press"] },
+   { id: "calf", driver: null, candidates: ["calf_raise"] },
+   { id: "core", driver: "hip", candidates: ["crunch", "situp", "lying_leg_raise", "hanging_leg_raise", "superman", "glute_bridge", "hip_thrust"] },
+   { id: "hold", driver: null, candidates: ["plank", "side_plank", "wall_sit"] },
+   { id: "cardio", driver: null, candidates: ["burpee", "mountain_climber", "jumping_jack"] }
   ],
-  metrics:[...bodyMetrics],
-  scope:'Измеряем проекции углов и наблюдаемые циклы суставов. Они не определяют нагрузку, безопасность или качество упражнения сами по себе.',
-  guide:['Один человек в кадре, голова, стопы и кисти видны полностью.','Для сгибания суставов снимайте сбоку, с неподвижной камеры.','Начните и закончите запись в исходной позиции.']
+  metrics: [...body, "hipDepth"], tableMetrics: [...body, "hipDepth"]
  },
- boxing:{
-  id:'boxing',name:'Boxing Coach',title:'Каждое движение.\nВ деталях.',
-  subtitle:'Изучайте одиночную технику: разгибание рук, положение головы и кистей, движение корпуса.',
-  tag:'ЛАБОРАТОРИЯ ТЕХНИКИ',accent:'#ffb49b',defaultFps:30,
-  exercises:[
-   {id:'free',label:'Свободное движение',driver:null},
-   {id:'straight',label:'Прямые удары',driver:'elbow',inverted:true},
-   {id:'hook',label:'Боковые удары',driver:null},
-   {id:'uppercut',label:'Удары снизу',driver:null},
-   {id:'combination',label:'Комбинации и бой с тенью',driver:null},
-   {id:'bag',label:'Работа на мешке',driver:'elbow',inverted:true},
-   {id:'defense',label:'Уклоны, нырки и защиты',driver:null},
-   {id:'footwork',label:'Стойка и перемещения',driver:null}
+ boxing: {
+  id: "boxing", accent: "#ffb49b", defaultFps: 30,
+  exercises: [
+   { id: "auto", driver: null },
+   { id: "straight", driver: "elbow", inverted: true },
+   { id: "hook", driver: null }, { id: "uppercut", driver: null },
+   { id: "combination", driver: null }, { id: "bag", driver: null }, { id: "mitts", driver: null },
+   { id: "kicks", driver: null }, { id: "defense", driver: null }, { id: "footwork", driver: null }
   ],
-  metrics:[...bodyMetrics,'guard'],
-  scope:'Циклы локтя — наблюдаемые разгибания, а не подтверждённые удары. Сила, попадания, защита от удара и результат спарринга не оцениваются.',
-  guide:['Снимайте одного спортсмена; спарринг пока не поддерживается.','Оставьте голову, кисти и стопы в кадре, обеспечьте хорошее освещение.','Для быстрых движений выбирайте 30 кадров анализа в секунду.']
+  metrics: [...body, "guard", "headOffset"], tableMetrics: [...body, "guard", "headOffset"]
  },
- rg:{
-  id:'rg',name:'Rhythm Coach',title:'Линии. Амплитуда.\nВаше движение.',
-  subtitle:'Посмотрите на форму движения: раскрытие ног, линии рук и коленей, положение головы и корпуса.',
-  tag:'СТУДИЯ ГИМНАСТИКИ',accent:'#c3b1ff',defaultFps:15,
-  exercises:[
-   {id:'free',label:'Свободное движение',driver:null},
-   {id:'shape',label:'Формы, растяжка и амплитуда',driver:null},
-   {id:'balance',label:'Равновесия',driver:null},
-   {id:'jump',label:'Прыжки',driver:null},
-   {id:'turn',label:'Повороты и вращения',driver:null},
-   {id:'wave',label:'Волны и наклоны корпуса',driver:null},
-   {id:'steps',label:'Шаги, связки и перемещения',driver:null},
-   {id:'apparatus',label:'Движения тела с предметом',driver:null},
-   {id:'routine',label:'Фрагмент упражнения',driver:null}
+ rg: {
+  id: "rg", accent: "#c3b1ff", defaultFps: 15,
+  exercises: [
+   { id: "auto", driver: null }, { id: "routine", driver: null }, { id: "element", driver: null },
+   { id: "balance", driver: null }, { id: "jump", driver: null }, { id: "turn", driver: null },
+   { id: "shape", driver: null }, { id: "wave", driver: null }, { id: "steps", driver: null }, { id: "apparatus", driver: null }
   ],
-  metrics:[...bodyMetrics,'split'],
-  scope:'Показываем геометрию тела в плоскости видео. Предметы, трудности, число оборотов, полёт и баллы по правилам FIG не определяются.',
-  guide:['Снимайте гимнастку в полный рост с запасом пространства.','Для амплитуды ног выбирайте ракурс в плоскости движения.','Камера должна быть неподвижной; избегайте перекрытий тела и лица.']
+  metrics: [...body, "split", "legLift", "headFoot"], tableMetrics: [...body, "split", "legLift", "headFoot"]
  }
 };
+/** v1 reports used "free"; it is the automatic mode now. */
+export const normalizeExercise = (sport: Sport, id: string) => profiles[sport].exercises.some(e => e.id === id) ? id : "auto";
