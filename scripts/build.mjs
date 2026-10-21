@@ -51,8 +51,11 @@ function serviceWorker(sport, cache, files, optional) {
  const models = "sport-coach-" + sport + "-models";
  return `const CACHE=${JSON.stringify(cache)},MODELS=${JSON.stringify(models)},FILES=${JSON.stringify(files)},OPTIONAL=${JSON.stringify(optional)};
 const optional=url=>OPTIONAL.some(f=>url.pathname.endsWith(f.slice(1)));
-self.addEventListener("install",event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES))));
-self.addEventListener("activate",event=>event.waitUntil((async()=>{for(const key of await caches.keys())if(key.startsWith("sport-coach-${sport}-")&&key!==CACHE&&key!==MODELS)await caches.delete(key);const m=await caches.open(MODELS);for(const req of await m.keys())if(!optional(new URL(req.url)))await m.delete(req);await self.clients.claim();})()));
+// A 0.1 worker (no models cache) has no update banner to send "skip-waiting": the new version takes over at once
+// and reloads the open 0.1 pages. Later updates wait for the user to press "Update".
+let legacy=false;
+self.addEventListener("install",event=>event.waitUntil((async()=>{legacy=!!self.registration.active&&!(await caches.has(MODELS));await (await caches.open(CACHE)).addAll(FILES);if(legacy)await self.skipWaiting();})()));
+self.addEventListener("activate",event=>event.waitUntil((async()=>{for(const key of await caches.keys())if(key.startsWith("sport-coach-${sport}-")&&key!==CACHE&&key!==MODELS)await caches.delete(key);const m=await caches.open(MODELS);for(const req of await m.keys())if(!optional(new URL(req.url)))await m.delete(req);await self.clients.claim();if(legacy)for(const c of await self.clients.matchAll({type:"window"}))c.navigate(c.url).catch(()=>{});})()));
 self.addEventListener("fetch",event=>{const url=new URL(event.request.url);if(event.request.method!=="GET"||url.origin!==self.location.origin)return;event.respondWith((async()=>{const main=await caches.open(CACHE),hit=await main.match(event.request);if(hit)return hit;if(optional(url)){const m=await caches.open(MODELS),cached=await m.match(event.request);if(cached)return cached;const res=await fetch(event.request);if(res.ok)await m.put(event.request,res.clone());return res;}if(event.request.mode==="navigate"){const page=await main.match("./index.html");if(page)return page;}return fetch(event.request);})());});
 self.addEventListener("message",event=>{if(event.data?.type==="skip-waiting"){self.skipWaiting();return;}if(event.data?.type==="offline-status")event.waitUntil((async()=>{const c=await caches.open(CACHE);if((await c.keys()).length>=FILES.length)event.source?.postMessage({type:"offline-ready"});})());});
 `;

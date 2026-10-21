@@ -6,10 +6,11 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright";
 const arg = (name, fallback) => { const i = process.argv.indexOf("--" + name); return i > 0 ? process.argv[i + 1] : process.env[name.toUpperCase()] ?? fallback; };
-const root = path.resolve("dist"), fixtures = path.resolve(arg("fixtures", "work/fixtures")), out = path.resolve(arg("out", "artifacts/e2e"));
+const dist = path.resolve("dist"), fixtures = path.resolve(arg("fixtures", "work/fixtures")), out = path.resolve(arg("out", "artifacts/e2e"));
 const types = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".wasm": "application/wasm", ".task": "application/octet-stream", ".json": "application/json", ".webmanifest": "application/manifest+json", ".png": "image/png", ".svg": "image/svg+xml", ".md": "text/markdown" };
+let serveRoot = dist;
 const server = http.createServer(async (req, res) => {
- try { let file = path.resolve(root, "." + decodeURIComponent(new URL(req.url, "http://x").pathname)); if (!file.startsWith(root)) { res.writeHead(403).end(); return; } if ((await fs.stat(file)).isDirectory()) file = path.join(file, "index.html"); res.writeHead(200, { "Content-Type": types[path.extname(file)] ?? "application/octet-stream", "Cache-Control": "no-cache" }).end(await fs.readFile(file)); }
+ try { const root = serveRoot; let file = path.resolve(root, "." + decodeURIComponent(new URL(req.url, "http://x").pathname)); if (!file.startsWith(root)) { res.writeHead(403).end(); return; } if ((await fs.stat(file)).isDirectory()) file = path.join(file, "index.html"); res.writeHead(200, { "Content-Type": types[path.extname(file)] ?? "application/octet-stream", "Cache-Control": "no-cache" }).end(await fs.readFile(file)); }
  catch { res.writeHead(404).end(); }
 });
 await new Promise(r => server.listen(0, "127.0.0.1", r));
@@ -40,6 +41,29 @@ for (const c of cases) {
  results.push({ name: c.name, sport: c.sport, file: c.file, wallMs: Date.now() - started, ...r, rawKeys: [...new Set(rawKeys)].slice(0, 10), errors });
  console.log(c.name, JSON.stringify(results[results.length - 1]));
  await context.close();
+}
+// PWA update path: a 0.1 service worker (cache-first, no update banner) must hand over to this build by itself,
+// and a later build must wait for the user's "Update" instead of reloading the page.
+if (!process.argv.includes("--skip-update")) {
+ const legacy = path.join(out, "update-legacy", "fitness", "pwa"), newer = path.join(out, "update-newer");
+ await fs.rm(path.join(out, "update-legacy"), { recursive: true, force: true }); await fs.rm(newer, { recursive: true, force: true });
+ await fs.mkdir(legacy, { recursive: true });
+ await fs.writeFile(path.join(legacy, "index.html"), '<!doctype html><meta charset="utf-8"><p id="legacy">0.1</p><script>navigator.serviceWorker.register("./sw.js")</script>');
+ await fs.writeFile(path.join(legacy, "sw.js"), 'const CACHE="sport-coach-fitness-legacy",FILES=["./index.html"];self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES))));self.addEventListener("activate",e=>e.waitUntil(self.clients.claim()));self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;e.respondWith((async()=>{const c=await caches.open(CACHE);return (await c.match(e.request))||(e.request.mode==="navigate"&&await c.match("./index.html"))||fetch(e.request);})());});');
+ await fs.cp(path.join(dist, "fitness", "pwa"), path.join(newer, "fitness", "pwa"), { recursive: true });
+ await fs.appendFile(path.join(newer, "fitness", "pwa", "sw.js"), "\n// newer build\n");
+ const context = await browser.newContext(), page = await context.newPage(), errors = [];
+ const state = () => page.evaluate(() => ({ legacy: !!document.getElementById("legacy"), app: !!document.getElementById("analyze"), banner: !!document.getElementById("update-banner") && !document.getElementById("update-banner").hidden }));
+ try {
+  serveRoot = path.join(out, "update-legacy");
+  await page.goto(origin + "/fitness/pwa/"); await page.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 20000 });
+  serveRoot = dist; await page.reload();
+  await page.waitForFunction(() => !!document.getElementById("analyze"), null, { timeout: 60000 }).catch(() => errors.push("0.1 page did not switch to this build"));
+  serveRoot = newer; await page.waitForTimeout(2000); await page.reload(); await page.waitForTimeout(8000);
+  const s = await state(); if (!s.app || !s.banner) errors.push("newer build: expected the update banner, got " + JSON.stringify(s));
+ } catch (e) { errors.push(String(e)); }
+ serveRoot = dist; await context.close();
+ results.push({ name: "pwa-update", errors, rawKeys: [] }); console.log("pwa-update", errors.length ? JSON.stringify(errors) : "ok");
 }
 await browser.close(); server.close();
 await fs.writeFile(path.join(out, "e2e-report.json"), JSON.stringify({ testedAt: new Date().toISOString(), results, external: [...new Set(external)] }, null, 2));
