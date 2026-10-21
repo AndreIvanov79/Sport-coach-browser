@@ -1,42 +1,41 @@
-# Architecture and source mapping
+# Architecture (v0.2)
 
 ## Product boundary
 
-The user's final requirements override suggestions in the pasted conversation: three separate sports, Chromium + Firefox extensions and PWAs, local file/camera input, fully on-device MediaPipe and deterministic explanations. No page-video capture, server inference, LLM, analytics, accounts or billing.
+Three separate products (fitness, boxing, rhythmic gymnastics) built from one TypeScript core; each ships as a PWA, a Chromium MV3 extension and a Firefox MV3 extension. Analysis runs entirely on the device: MediaPipe Pose Landmarker in a Web Worker, deterministic metrics and rule-based findings. No server inference, LLM, analytics, accounts or billing.
 
-The provided conversation supplies the local file → decoded frames → MediaPipe Worker → metrics/rules → optional local history architecture. The actual prompt-plan attachment mentioned in that conversation was not supplied; the implementation does not assume unseen requirements from it.
+## Pipeline
 
-## Reused concepts from qwen36
+File / recording → decoder (requestVideoFrameCallback playback, seek fallback) → downscaled frame (max 960 px) → transferable ImageBitmap → classic Worker → MediaPipe (Lite/Full/Heavy, up to 3 people) → samples with all candidates and their clothing colours (`core/appearance.ts`: mean torso/thigh RGB from a 256 px copy of the frame, memory only) →
+`core/track.ts` athlete selection and identity tracking → `core/body.ts` observed landmarks + bridged gaps (≤ 0.3 s) → `core/series.ts` per-frame series (joint angles, trunk, head, split, leg lift, guard, depth) → sport analysis (`sports/*`) → findings ranking → report.
 
-The source workspace was read without modification:
+Live mode runs the same engine on camera frames while MediaRecorder records; samples are aligned to the recording clock, so the report needs no second decoding pass.
 
-- gym-vl-api-analysis/video-handler-service/src/pipeline/fitness_metrics.py: complete observed joint cycles, relative hysteresis 0.30, minimum 25° angular range, missing observations reset phase.
-- boxing-vl-api-analysis/video-handler-service/src/pipeline/boxing_metrics.py: wrist height relative to body scale as a 2D observation, not a universal diagnosis of guard quality.
-- rg-vl-api-analysis/video-handler-service/src/pipeline/coach_pipeline.py: body shape geometry and evidence-based abstention.
-- Web frontends: local upload, camera, separate sport context and follow-up result workflow.
+## Ported from qwen36 (deterministic parts only)
 
-This is a new TypeScript implementation. COCO-WholeBody/RTMW's 133-point indices, Python runtime and scoring contracts are not copied into MediaPipe's 33-point schema. The existing local VLM, apparatus tracking, billing and CoP scoring pipelines are not browser-compatible features of this version.
+| Browser module | qwen36 source |
+| --- | --- |
+| `core/track.ts` | select_main_person / pose track continuity (position + scale gates, re-acquisition); browser addition: clothing-colour cost and rejection so crossing partners do not swap identity |
+| `core/body.ts` | mask_and_interpolate (short-gap bridging), pose_reliability (limb-length plausibility) |
+| `core/cycles.ts` | fitness_metrics._observed_cycles, detect_gym_driver (ROM ≥ 25°, hysteresis 0.30) |
+| `core/segments.ts` | segmentation.motion_envelope, hold_duration_metric |
+| `core/findings.ts` | *_findings.extract_findings: MIN_COUNT 2, MIN_SHARE 0.3, severity ranking, ≤ 3 faults / 3 strengths, focus |
+| `sports/fitness*.ts` | fitness_metrics (tempo, asymmetry, hip sag, depth, stance, foot split, prone support, wrist travel, hands overhead), fitness_vlm_prior.EXPECTATIONS (37 exercises, metrics-only fallback with dominance), fitness_findings thresholds |
+| `sports/boxing.ts` | boxing_metrics (rotation extent with deadband/glitch rejection, guard vs nose, stance, head offset), strike signature, boxing_findings thresholds |
+| `sports/rg*.ts` | rg_spatial (support, flight with take-off, free/support leg, profile-passage half turns, still shape), recognition_profiles.json, body_difficulties.json families, FIG 2.5 split bands, judging_rules group minimum; browser additions: a flight needs a plausibly long lowest leg (Lite collapses legs in ring/split poses), short low "flights" inside a turn sequence are treated as relevé, profile passages are not smoothed below 20 fps (a fast turn is in profile for ~1 frame at 15 fps) and a turn needs an upright body rather than a detected sole contact, but is rejected while the model folds a leg (held ring/split balances in profile flicker like turns) or the athlete pivots on two flat feet, shape stillness uses a 3-frame median |
 
-## Runtime
+Thresholds are coach heuristics or engineering gates exactly as in qwen36, not new sports rules. Two browser-only additions are documented in code: a `standing` predicate that separates leg press from squat (no VLM to disambiguate), and per-repetition facts (qwen36 used VLM segments; here each complete observed cycle is one unit).
 
-File / recorded Blob → object URL → dedicated HTMLVideoElement → sequential seeks → downscaled canvas (max 960 px edge) → one transferable ImageBitmap → classic Worker → MediaPipe Lite → raw landmarks and flags → geometry → report.
+## Honesty rules
 
-The Worker is bundled independently as IIFE. MediaPipe's loader uses importScripts, which is not supported inside module Workers. GPU initialization falls back to CPU. An abort terminates the Worker, rejects outstanding requests and releases the video/object URL. The UI never stores decoded frame sequences.
+- Medians, extremes and coverage use only observed landmarks; bridged values feed cycles and charts only.
+- A metric needs ≥ 60% coverage and ≥ 4 values; otherwise it is reported as not assessed.
+- Ambiguous exercise geometry yields candidates, never a guess.
+- 2D split angles are review candidates and are kept out of the E estimate; no total RG score is produced.
+- Voice prompts use on-device voices only (`localService`); network voices would send the spoken text to a speech service.
 
-Frames with no detected pose or multiple detected poses have no body measurements. Low-visibility, nonfinite, off-frame and degenerate required landmarks produce nulls. Normalized x/y coordinates are converted to image aspect-correct coordinates before measuring angles. World coordinates are not marketed as true calibrated biomechanics.
+## Storage and packaging
 
-Metric median and P2/P98 range require >= 60% coverage and >= 4 observations. Cycles require a complete baseline → excursion → baseline, >= 25° range, >= 0.2 seconds, strictly increasing timestamps and no observation gap greater than 0.25 seconds. Sampling timestamps are requested video positions, not a guarantee that source frame timestamps differ by exactly that amount. No unsupported muscle-phase labels are inferred.
+IndexedDB v2 per sport: `reports` (landmarks packed into Float32Array) and `summaries` (history list, trends, comparison). v1 records are migrated on upgrade. Reports are re-derived from landmarks on open (`refreshReport`), so code improvements apply to old reports.
 
-Reports retain timestamps, thresholds, model identity, sample landmarks, nulls, coverage and rule explanations. The model's visibility is an estimator output, not a guarantee of physical visibility or identity.
-
-## Isolation and packaging
-
-Each product has a distinct name, sport constant, output tree, IndexedDB database, PWA identity/scope/cache and extension identity. Shared source code is intentional; users never select between sports within one installed app.
-
-Chromium Manifest V3 uses a background service worker that only opens index.html on action click. Firefox uses an event/background script. No host permissions are requested. The extension page and Worker use local assets with wasm-unsafe-eval only for WebAssembly.
-
-PWA service workers precache the entire runtime, including both WASM variants and the model. Readiness is acknowledged after cache completion. Updates wait for old clients to close. Cache names include the built entry fingerprint, worker bytes and model digest.
-
-## Validation scope
-
-Pure geometry/cycle tests cover aspect ratio, missing evidence, partial cycles, temporal gaps, inverted extension cycles, ambiguous people and abstention. The browser test uses a two-second excerpt of a local real video and checks processing with the browser offline. It does not establish recognition accuracy, coaching validity, mobile performance or measurement calibration. Camera automation uses a synthetic browser device.
+PWA service worker precaches the app, both WASM variants and the Lite model; optional Full/Heavy models are cached on first use in a separate cache that survives app updates. A waiting worker is applied only after the user presses “Update” (or when an analysis ends). Extensions include every built model and request no permissions.
