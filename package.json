@@ -1,14 +1,16 @@
 {
   "name": "sport-coach-browser",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "build:lite": "node scripts/build.mjs --lite-only",
     "package": "node scripts/build.mjs --package",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "check": "tsc --noEmit",
     "preview": "node scripts/serve.mjs",
-    "check": "tsc --noEmit"
+    "e2e": "node scripts/e2e.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "0.10.32"

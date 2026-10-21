@@ -1,0 +1,33 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      # Downloads the pinned MediaPipe models (Lite required, Full/Heavy optional) and verifies SHA-256 from assets-lock.json.
+      - run: npm run build
+      - run: npm run package
+      - uses: actions/upload-artifact@v4
+        with: { name: sport-coach-packages, path: artifacts/packages/ }
+  e2e:
+    runs-on: ubuntu-latest
+    needs: build
+    if: ${{ vars.E2E_FIXTURES_URL != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci && npx playwright install --with-deps chromium
+      - run: npm run build
+      # Fixtures are private training clips (not in the repo): VP9 WebM files + cases.json, see docs/verification.md.
+      - run: mkdir -p work/fixtures && curl -sSL "${{ vars.E2E_FIXTURES_URL }}" | tar -xz -C work/fixtures
+      - run: npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: e2e-report, path: artifacts/e2e/ }

@@ -1,7 +1,11 @@
 {
-  "model": "MediaPipe Pose Landmarker Lite float16 v1",
-  "url": "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
-  "bytes": 5777746,
-  "sha256": "59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a",
+  "models": {
+    "lite": {
+      "file": "pose_landmarker_lite.task",
+      "url": "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+      "bytes": 5777746,
+      "sha256": "59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a"
+    }
+  },
   "packageVersion": "0.10.32"
 }
