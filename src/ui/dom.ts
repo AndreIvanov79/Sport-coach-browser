@@ -25,6 +25,7 @@ const ICONS: Record<string, string> = {
  user: "<circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21c1-4 4-6 8-6s7 2 8 6\"/>", compare: "<path d=\"M8 3v18M16 3v18M3 8h5m8 0h5M3 16h5m8 0h5\"/>", import: "<path d=\"M12 21V9m-5 5 5-5 5 5M4 7V3h16v4\"/>",
  attach: "<path d=\"m21 11-8.5 8.5a5 5 0 0 1-7-7L14 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L15 7\"/>", prev: "<path d=\"M18 6 9 12l9 6ZM6 6v12\"/>", next: "<path d=\"m6 6 9 6-9 6ZM18 6v12\"/>",
  volume: "<path d=\"M4 9h4l5-4v14l-5-4H4Z\"/><path d=\"M17 9a4 4 0 0 1 0 6m2-9a8 8 0 0 1 0 12\"/>", stop: "<rect x=\"6\" y=\"6\" width=\"12\" height=\"12\" rx=\"2\"/>", refresh: "<path d=\"M20 11a8 8 0 1 0-2 6m2-12v6h-6\"/>",
+ expand: "<path d=\"M4 9V4h5m6 0h5v5m0 6v5h-5m-6 0H4v-5\"/>", shrink: "<path d=\"M9 4v5H4m11-5v5h5m0 6h-5v5m-6 0v-5H4\"/>",
  globe: "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18\"/>", star: "<path d=\"m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9Z\"/>"
 };
 export const icon = (name: string, size = 20) => "<svg width=\"" + size + "\" height=\"" + size + "\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\">" + (ICONS[name] ?? "") + "</svg>";

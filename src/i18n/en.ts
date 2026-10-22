@@ -5,7 +5,7 @@ export const en: Record<string, string> = {
 "app.install": "Install", "app.yourVideo": "Your video", "app.upTo10": "Up to 10 minutes", "app.uploadFile": "Upload a file", "app.liveCamera": "Live camera",
 "app.drop": "Drop a video here", "app.dropOr": "or click to choose a file", "app.formats": "MP4, WebM, MOV · depending on browser codecs",
 "app.skeleton": "Skeleton", "app.angles": "Angles", "app.replace": "Replace", "app.stepBack": "Previous analysed frame", "app.stepFwd": "Next analysed frame",
-"app.keysHint": "← → step through analysed frames", "app.localFile": "The file is opened locally — its content is not sent anywhere.",
+"app.keysHint": "← → step through analysed frames · F full screen", "app.fullscreen": "Full screen with the skeleton", "app.localFile": "The file is opened locally — its content is not sent anywhere.",
 "app.labelSource": "SOURCE VIDEO", "app.labelSkeleton": "SKELETON · MEDIAPIPE", "app.noteSource": "After analysis the skeleton and angles appear here. The video stays on your device.",
 "app.noteSkeleton": "White dots are confidently visible landmarks. The skeleton follows the nearest analysed frame; angles are measured in the image plane.",
 "app.settings": "Analysis settings", "app.movement": "Movement group", "app.fps": "Analysis rate", "app.threshold": "Landmark visibility threshold",

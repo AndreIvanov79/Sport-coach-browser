@@ -13,6 +13,7 @@ import { renderHistory } from "./ui/history-view.ts";
 import { LiveSession } from "./ui/live.ts";
 import { multiFrames, pickAthlete } from "./ui/picker.ts";
 import { idle, refreshPwaTexts, setupPwa } from "./ui/pwa.ts";
+import { bindFullscreen } from "./ui/fullscreen.ts";
 const profile = profiles[__SPORT__], app = document.querySelector<HTMLDivElement>("#app")!;
 const extension = location.protocol.endsWith("-extension:");
 const models = availableModels();
@@ -51,7 +52,7 @@ app.innerHTML = `
      <div class="source-tabs" role="group"><button id="source-file" class="selected">${icon("upload", 17)} <span data-i18n="app.uploadFile"></span></button><button id="source-camera">${icon("live", 17)} <span data-i18n="app.liveCamera"></span></button></div>
      <input type="file" id="file-input" accept="video/*" hidden><input type="file" id="attach-input" accept="video/*" hidden>
      <button class="dropzone" id="dropzone"><div class="motion-art" aria-hidden="true"><svg viewBox="0 0 240 140" fill="none"><ellipse cx="120" cy="117" rx="76" ry="9" stroke="currentColor" opacity=".15"/><path d="M51 43v-15h15m108 0h15v15M51 86v15h15m108 0h15V86" stroke="currentColor" opacity=".4"/><g stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="128" cy="29" r="9"/><path d="m125 43-14 29 28 20 17 25m-45-45-27 25-22 14m56-57 26 10 21-21m-40 0-27 8-16-15"/></g><g fill="currentColor"><circle cx="111" cy="72" r="4"/><circle cx="139" cy="92" r="4"/><circle cx="84" cy="97" r="4"/><circle cx="144" cy="64" r="4"/><circle cx="98" cy="51" r="4"/></g></svg></div><strong data-i18n="app.drop"></strong><span data-i18n="app.dropOr"></span><small data-i18n="app.formats"></small></button>
-     <div id="player-section" hidden><div class="video-wrap" id="video-wrap" tabindex="0"><video id="player" controls playsinline preload="metadata"></video><canvas id="pose-overlay" aria-hidden="true"></canvas><span class="video-label" id="video-label"></span></div>
+     <div id="player-section" hidden><div class="video-wrap" id="video-wrap" tabindex="0"><video id="player" controls playsinline preload="metadata"></video><canvas id="pose-overlay" aria-hidden="true"></canvas><span class="video-label" id="video-label"></span><button class="video-fs" id="fullscreen" type="button" data-i18n-aria="app.fullscreen">${icon("expand", 18)}</button></div>
       <div class="player-footer"><span id="file-label"></span><label class="toggle"><input type="checkbox" id="show-skeleton" checked> <span data-i18n="app.skeleton"></span></label><label class="toggle"><input type="checkbox" id="show-angles" checked> <span data-i18n="app.angles"></span></label><button class="text-button" id="replace-file" data-i18n="app.replace"></button></div>
       <div class="player-tools"><div class="speed" role="group"><button data-speed="0.25">0.25×</button><button data-speed="0.5">0.5×</button><button data-speed="1" class="selected">1×</button></div><button class="icon-button" id="step-back" data-i18n-aria="app.stepBack">${icon("prev", 16)}</button><button class="icon-button" id="step-fwd" data-i18n-aria="app.stepFwd">${icon("next", 16)}</button><span class="mini muted" data-i18n="app.keysHint"></span></div>
       <p class="mini muted" id="playback-note"></p></div>
@@ -95,6 +96,7 @@ app.innerHTML = `
 <div id="update-banner" class="update-banner" role="status" hidden></div>
 <div id="toast" class="toast" role="status" hidden></div>`;
 const player = $<HTMLVideoElement>("player"), overlay = $<HTMLCanvasElement>("pose-overlay");
+const fullscreen = bindFullscreen($("video-wrap"), player, $<HTMLButtonElement>("fullscreen"));
 function applyI18n() {
  document.querySelectorAll<HTMLElement>("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n!); });
  document.querySelectorAll<HTMLElement>("[data-i18n-aria]").forEach(el => el.setAttribute("aria-label", t(el.dataset.i18nAria!)));
@@ -177,7 +179,9 @@ function step(dir: number) {
 }
 $("step-back").onclick = () => step(-1); $("step-fwd").onclick = () => step(1);
 document.addEventListener("keydown", event => {
- const target = event.target as HTMLElement; if (view !== "analysis" || !report || !file || /INPUT|SELECT|TEXTAREA/.test(target.tagName) || document.querySelector("dialog[open]")) return;
+ const target = event.target as HTMLElement;
+ if (event.code === "KeyF" && !event.ctrlKey && !event.metaKey && !event.altKey && view === "analysis" && file && !/INPUT|SELECT|TEXTAREA/.test(target.tagName) && !document.querySelector("dialog[open]")) { event.preventDefault(); fullscreen.toggle(); return; }
+ if (view !== "analysis" || !report || !file || /INPUT|SELECT|TEXTAREA/.test(target.tagName) || document.querySelector("dialog[open]")) return;
  if (event.key === "ArrowLeft" || event.key === "ArrowRight") { event.preventDefault(); step(event.key === "ArrowRight" ? 1 : -1); }
 });
 function seek(time: number) { if (!file) return; player.pause(); player.currentTime = time; $("player-section").scrollIntoView({ behavior: "smooth", block: "center" }); }

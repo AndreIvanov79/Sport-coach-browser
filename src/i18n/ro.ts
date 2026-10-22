@@ -5,7 +5,7 @@ export const ro: Record<string, string> = {
 "app.install": "Instalează", "app.yourVideo": "Video-ul tău", "app.upTo10": "Până la 10 minute", "app.uploadFile": "Încarcă fișier", "app.liveCamera": "Cameră live",
 "app.drop": "Trage un video aici", "app.dropOr": "sau apasă pentru a alege un fișier", "app.formats": "MP4, WebM, MOV · în funcție de codecurile browserului",
 "app.skeleton": "Schelet", "app.angles": "Unghiuri", "app.replace": "Înlocuiește", "app.stepBack": "Cadrul analizat anterior", "app.stepFwd": "Cadrul analizat următor",
-"app.keysHint": "← → pas cu pas prin cadrele analizate", "app.localFile": "Fișierul se deschide local — conținutul lui nu este trimis nicăieri.",
+"app.keysHint": "← → pas cu pas prin cadrele analizate · F ecran complet", "app.fullscreen": "Ecran complet cu scheletul", "app.localFile": "Fișierul se deschide local — conținutul lui nu este trimis nicăieri.",
 "app.labelSource": "VIDEO SURSĂ", "app.labelSkeleton": "SCHELET · MEDIAPIPE", "app.noteSource": "După analiză aici apar scheletul și unghiurile. Video-ul rămâne pe dispozitiv.",
 "app.noteSkeleton": "Punctele albe sunt repere vizibile sigur. Scheletul urmează cel mai apropiat cadru analizat; unghiurile sunt în planul imaginii.",
 "app.settings": "Setări analiză", "app.movement": "Grupă de mișcări", "app.fps": "Frecvența analizei", "app.threshold": "Pragul de vizibilitate a punctelor",

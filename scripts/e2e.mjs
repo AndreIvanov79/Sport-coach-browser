@@ -38,6 +38,13 @@ for (const c of cases) {
  const text = await page.locator("#report-section").innerText().catch(() => "");
  const rawKeys = [...text.matchAll(/\b(?:f|s|sd|m|md|rg\.el|ex|exn|app|report|sum)\.[a-z][\w.]*\b/g)].map(m => m[0]).filter(k => !/\.(mp4|webm|json|csv)$/.test(k));
  await page.screenshot({ path: path.join(out, c.name + ".png"), fullPage: true });
+ if (!results.length && r.samples) {
+  // Full screen must cover the video AND the skeleton layer (the browser's own video fullscreen shows the bare video).
+  await page.click("#fullscreen"); await page.waitForTimeout(600);
+  const fsState = await page.evaluate(() => ({ el: document.fullscreenElement?.id ?? null, canvas: document.getElementById("pose-overlay").clientWidth, view: innerWidth }));
+  if (fsState.el !== "video-wrap" || fsState.canvas !== fsState.view) errors.push("fullscreen: " + JSON.stringify(fsState));
+  await page.keyboard.press("KeyF"); await page.waitForTimeout(300);
+ }
  results.push({ name: c.name, sport: c.sport, file: c.file, wallMs: Date.now() - started, ...r, rawKeys: [...new Set(rawKeys)].slice(0, 10), errors });
  console.log(c.name, JSON.stringify(results[results.length - 1]));
  await context.close();
