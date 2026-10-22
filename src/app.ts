@@ -5,7 +5,7 @@ import { AnalysisAborted, analyzeVideo } from "./analyzer.ts";
 import { EngineError, availableModels } from "./engine.ts";
 import { makeReport } from "./core/report.ts";
 import { persistStorage, saveReport } from "./storage.ts";
-import { LANGS, getLang, setLang, t } from "./i18n/index.ts";
+import { LANGS, LANG_NAMES, getLang, setLang, t } from "./i18n/index.ts";
 import { $, download, esc, formatTime, icon, toast } from "./ui/dom.ts";
 import { drawMini, drawPose } from "./ui/overlay.ts";
 import { renderReport } from "./ui/report-view.ts";
@@ -42,7 +42,7 @@ app.innerHTML = `
  <div class="sidebar-bottom"><div class="privacy-symbol">${icon("shield", 24)}</div><strong data-i18n="app.privacyTitle"></strong><p data-i18n="app.privacyText"></p><button class="text-button" id="privacy-info"><span data-i18n="app.privacyMore"></span> ${icon("arrow", 15)}</button><div class="version">SPORT COACH <span>v${__APP_VERSION__} · LOCAL</span></div></div>
 </aside>
 <div class="workspace">
- <header class="topbar"><div class="breadcrumb"><span data-i18n="sport.${profile.id}.name"></span> <span>/</span> <b id="page-label"></b></div><div class="top-actions"><label class="lang">${icon("globe", 15)}<select id="lang" aria-label="Language">${LANGS.map(l => "<option value=\"" + l + "\"" + (l === getLang() ? " selected" : "") + ">" + l.toUpperCase() + "</option>").join("")}</select></label><button class="small-button" id="install" hidden>${icon("download", 16)} <span data-i18n="app.install"></span></button><span class="status-pill" id="offline-status"></span></div></header>
+ <header class="topbar"><div class="breadcrumb"><span data-i18n="sport.${profile.id}.name"></span> <span>/</span> <b id="page-label"></b></div><div class="top-actions"><label class="lang">${icon("globe", 15)}<select id="lang" aria-label="Language">${LANGS.map(l => "<option value=\"" + l + "\"" + (l === getLang() ? " selected" : "") + ">" + LANG_NAMES[l] + "</option>").join("")}</select></label><button class="small-button" id="install" hidden>${icon("download", 16)} <span data-i18n="app.install"></span></button><span class="status-pill" id="offline-status"></span></div></header>
  <main>
   <div id="analysis-view">
    <section class="hero"><div><div class="eyebrow"><span></span><b data-i18n="sport.${profile.id}.tag"></b></div><h1 data-i18n="sport.${profile.id}.title"></h1><p data-i18n="sport.${profile.id}.subtitle"></p></div><div class="hero-stamp"><span>ON DEVICE</span>${icon("shield", 38)}<span>BY DESIGN</span></div></section>

@@ -21,7 +21,7 @@ dialog{width:min(590px,calc(100vw - 32px));max-height:90vh;padding:38px;backgrou
 @media print{:root{color:#111;background:#fff;color-scheme:light}.sidebar,.topbar,.hero,.studio-grid,.progress-panel,.report-actions,.principles,footer,.toast,dialog,.time-link,#error{display:none!important}.workspace{margin:0}main{padding:0;max-width:none}.panel,.summary-card,.notice{background:#fff;border-color:#ccc;color:#111;break-inside:avoid}.report-grid{display:block}.report-grid>.panel{margin-top:15px}.summary-grid{display:grid;grid-template-columns:repeat(3,1fr)}.summary-card>strong{color:#111}.muted,.finding p,.metric-row small,.summary-card p,.summary-card>span{color:#444}.metric-row>:last-child,.eyebrow{color:#222}.report-heading{margin-top:0}.details{display:none}#report-section{display:block!important}.graph-panel svg path[fill=none]{stroke:#222}.notice p{color:#333}}
 /* v0.2 additions */
 h1{white-space:pre-line}.brand-icon{width:42px;height:42px;border-radius:11px;object-fit:cover;flex-shrink:0}.brand b{font-weight:650}
-.lang{display:inline-flex;align-items:center;gap:5px;color:var(--muted)}.lang select{width:auto;padding:6px 8px;font-size:11px;background:transparent}
+.lang{display:inline-flex;align-items:center;gap:5px;color:var(--muted)}.lang select{width:auto;padding:6px 8px;font-size:12px;color:#e9eeeb;background:#141b19;border-color:#4a5a4e;cursor:pointer}.lang:hover select,.lang select:focus-visible{border-color:var(--accent)}
 .status-pill i{background:#e9b36c}.status-pill i.ok{background:var(--accent)}
 .player-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 6px}.speed{display:inline-flex;border:1px solid #3a473e;border-radius:7px;overflow:hidden}.speed button{border:0;background:#202922;padding:7px 10px;font-size:10px;color:var(--muted)}.speed button.selected{background:#2b3930;color:var(--accent)}
 .video-wrap:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
@@ -54,3 +54,6 @@ dialog.wide{width:min(980px,calc(100vw - 24px))}.picker-stage{position:relative;
 
 .video-fs{position:absolute;right:10px;top:10px;z-index:2;width:34px;height:34px;display:grid;place-items:center;background:#0c161bcc;color:#dde5dd;border:1px solid #ffffff26;border-radius:7px;cursor:pointer}.video-fs:hover,.video-fs:focus-visible{color:var(--accent);border-color:var(--accent)}
 .video-wrap.is-fullscreen{border-radius:0;width:100%;height:100%;min-height:0;background:#000}.video-wrap.is-fullscreen video{width:100%;height:100%;min-height:0;max-height:none}.video-wrap.is-fullscreen .video-fs{top:16px;right:16px}
+/* Native dropdown lists take their colours from the options: keep them dark with light text in every browser. */
+option,optgroup{background-color:#141b19;color:#e9eeeb}
+@media(max-width:650px){.nav-item{padding:9px}}

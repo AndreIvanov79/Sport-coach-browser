@@ -5,6 +5,8 @@ import { ro } from "./ro.ts";
 export type Dict = Record<string, string>;
 export const DICTS: Record<Lang, Dict> = { ru, en, ro };
 export const LANGS: Lang[] = ["ru", "en", "ro"];
+/** Each language in its own name, so it can be found whatever the current interface language is. */
+export const LANG_NAMES: Record<Lang, string> = { ru: "Русский", en: "English", ro: "Română" };
 const STORE = "sport-coach-lang";
 export function detectLang(): Lang {
  try { const saved = localStorage.getItem(STORE) as Lang | null; if (saved && LANGS.includes(saved)) return saved; } catch { /* storage unavailable */ }
