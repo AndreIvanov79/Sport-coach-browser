@@ -33,26 +33,38 @@ export function pickAthlete(r: Report, player: HTMLVideoElement, auto = false): 
  const frames = clearFrames(r); if (!frames.length) return Promise.resolve(null);
  $("picker-text").textContent = t(auto ? "picker.textAuto" : "picker.text"); $("picker-cancel").textContent = t(auto ? "picker.keep" : "app.cancel");
  const dialog = $<HTMLDialogElement>("picker-dialog"), canvas = $<HTMLCanvasElement>("picker-canvas"), image = $<HTMLCanvasElement>("picker-frame");
+ // Frames come from a separate hidden copy of the video: seeking the visible player back and forth and copying its
+ // frames could leave its picture frozen in some browsers (the clock and the skeleton ran on, the image did not).
+ const host = document.createElement("div"), grab = document.createElement("video");
+ host.style.cssText = "position:fixed;left:0;bottom:0;width:2px;height:2px;overflow:hidden;opacity:.01;pointer-events:none;z-index:-1";
+ grab.muted = true; grab.playsInline = true; grab.preload = "auto"; grab.src = player.currentSrc || player.src; host.appendChild(grab); document.body.appendChild(host);
+ const ready = new Promise<void>(resolve => { if (grab.readyState >= 2) resolve(); else { grab.addEventListener("loadeddata", () => resolve(), { once: true }); grab.addEventListener("error", () => resolve(), { once: true }); setTimeout(resolve, 5000); } });
  // Start where the analysed person is visible next to others, with them preselected.
- let pos = 0, chosen: number | null = currentCandidate(r.samples[frames[0]]), hits: { x0: number; y0: number; x1: number; y1: number }[] = [];
- const render = async () => {
-  const idx = frames[pos], s = r.samples[idx];
-  $("picker-time").textContent = t("picker.frame", { time: formatTime(s.time), n: pos + 1, total: frames.length });
-  player.pause();
-  if (Math.abs(player.currentTime - s.time) > .01) await new Promise<void>(resolve => { const done = () => { player.removeEventListener("seeked", done); resolve(); }; player.addEventListener("seeked", done); player.currentTime = s.time; setTimeout(done, 3000); });
-  const vw = player.videoWidth || s.width, vh = player.videoHeight || s.height;
-  const dpr = devicePixelRatio || 1; image.width = image.clientWidth * dpr; image.height = image.clientHeight * dpr;
-  const ctx = image.getContext("2d")!; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, image.clientWidth, image.clientHeight);
-  const box = videoBox(image, vw, vh); try { ctx.drawImage(player, box.ox, box.oy, box.w, box.h); } catch { /* frame unavailable */ }
-  const selected = chosen;
-  hits = drawCandidates(canvas, vw, vh, s.candidates ?? [], selected, r.threshold, t("picker.selectedTag"));
+ let pos = 0, shown = -1, token = 0, chosen: number | null = currentCandidate(r.samples[frames[0]]), hits: { x0: number; y0: number; x1: number; y1: number }[] = [];
+ const people = () => {
+  const s = r.samples[frames[pos]], vw = grab.videoWidth || player.videoWidth || s.width, vh = grab.videoHeight || player.videoHeight || s.height;
+  hits = drawCandidates(canvas, vw, vh, s.candidates ?? [], chosen, r.threshold, t("picker.selectedTag"));
   ($("picker-confirm") as HTMLButtonElement).disabled = chosen === null;
  };
+ const render = async () => {
+  const my = ++token, idx = frames[pos], s = r.samples[idx];
+  $("picker-time").textContent = t("picker.frame", { time: formatTime(s.time), n: pos + 1, total: frames.length });
+  people();
+  if (shown === idx) return;
+  await ready;
+  if (Math.abs(grab.currentTime - s.time) > .01) await new Promise<void>(resolve => { const done = () => { grab.removeEventListener("seeked", done); resolve(); }; grab.addEventListener("seeked", done); grab.currentTime = s.time; setTimeout(done, 3000); });
+  if (my !== token) return;
+  const vw = grab.videoWidth || s.width, vh = grab.videoHeight || s.height;
+  const dpr = devicePixelRatio || 1; image.width = image.clientWidth * dpr; image.height = image.clientHeight * dpr;
+  const ctx = image.getContext("2d")!; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, image.clientWidth, image.clientHeight);
+  const box = videoBox(image, vw, vh); try { ctx.drawImage(grab, box.ox, box.oy, box.w, box.h); shown = idx; } catch { /* frame unavailable */ }
+  people();
+ };
  return new Promise(resolve => {
-  const finish = (seed: Seed | null) => { dialog.close(); canvas.onclick = null; resolve(seed); };
+  const finish = (seed: Seed | null) => { dialog.close(); canvas.onclick = null; token++; grab.removeAttribute("src"); grab.load(); host.remove(); resolve(seed); };
   canvas.onclick = event => {
    const rect = canvas.getBoundingClientRect(), x = event.clientX - rect.left, y = event.clientY - rect.top;
-   const k = hits.findIndex(h => x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1); if (k >= 0) { chosen = k; void render(); }
+   const k = hits.findIndex(h => x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1); if (k >= 0) { chosen = k; people(); }
   };
   $("picker-prev").onclick = () => { pos = Math.max(0, pos - 1); chosen = currentCandidate(r.samples[frames[pos]]); void render(); };
   $("picker-next").onclick = () => { pos = Math.min(frames.length - 1, pos + 1); chosen = currentCandidate(r.samples[frames[pos]]); void render(); };

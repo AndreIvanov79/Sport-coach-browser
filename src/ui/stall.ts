@@ -18,8 +18,13 @@ export function watchFrozenFrames(video: HTMLVideoElement): void {
   const now = performance.now(), ahead = video.currentTime - frameMedia;
   // 1.2 s of media time without a new frame: far beyond any normal frame interval (even 1 fps at 1x).
   if (now - frameAt > 1500 && ahead > 1.2 && now - lastFix > 3000) {
-   lastFix = now; console.warn("[sport-coach] video picture stalled at " + frameMedia.toFixed(2) + " s while the clock is at " + video.currentTime.toFixed(2) + " s (rate " + video.playbackRate + "); re-seeking");
-   video.currentTime = video.currentTime;
+   // First a seek; if the picture is still stuck soon after, reload the media pipeline at the same position.
+   const hard = now - lastFix < 10000; lastFix = now;
+   console.warn("[sport-coach] video picture stalled at " + frameMedia.toFixed(2) + " s while the clock is at " + video.currentTime.toFixed(2) + " s (rate " + video.playbackRate + "); " + (hard ? "reloading the player" : "re-seeking"));
+   if (!hard) { video.currentTime = video.currentTime; return; }
+   const at = video.currentTime, rate = video.playbackRate;
+   video.addEventListener("loadedmetadata", () => { video.currentTime = at; video.playbackRate = rate; video.play().catch(() => undefined); }, { once: true });
+   video.load();
   }
  }, 500);
 }
