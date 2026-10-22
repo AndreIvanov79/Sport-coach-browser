@@ -19,3 +19,13 @@ test("overlay draws the face, excludes uncertain points and labels angles", () =
  arcs.length = 0; lms[0].visibility = .1; drawLandmarks(ctx as unknown as CanvasRenderingContext2D, lms, { ox: 0, oy: 0, w: 1000, h: 1000 }, { accent: "#fff", threshold: .65 }, { w: 1000, h: 1000 });
  assert.equal(arcs.length, 32);
 });
+test("imported reports cannot smuggle markup through the id or file name", async () => {
+ const { makeReport } = await import("../src/core/report.ts");
+ const { validateImport } = await import("../src/ui/history-view.ts");
+ const { samples } = await import("./fixtures.ts");
+ const r = makeReport({ sport: "fitness", exercise: "squat", fileName: "s.mp4", samples: samples(30, 15, () => pose()), fps: 15, threshold: .65, elapsedMs: 1, duration: 2 });
+ const ok = validateImport(JSON.parse(JSON.stringify(r)), "fitness");
+ assert.equal(ok.id, r.id); assert.equal(ok.fileName, "s.mp4");
+ const bad = validateImport({ ...JSON.parse(JSON.stringify(r)), id: "\"><img src=x>", createdAt: "<b>", fileName: 7 }, "fitness");
+ assert.match(bad.id, /^[\w-]+$/); assert.ok(!Number.isNaN(Date.parse(bad.createdAt))); assert.equal(bad.fileName, "report.json");
+});

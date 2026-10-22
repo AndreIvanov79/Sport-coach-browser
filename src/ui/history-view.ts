@@ -11,7 +11,11 @@ export function validateImport(data: unknown, sport: Sport): Report {
  if (!r || typeof r !== "object" || !Array.isArray(r.samples) || typeof r.duration !== "number") throw new Error(t("history.importInvalid"));
  if (r.sport !== sport) throw new Error(t("history.importSport", { sport: t("sport." + r.sport + ".name") }));
  for (const s of r.samples.slice(0, 50)) if (typeof s.time !== "number" || !Array.isArray(s.landmarks)) throw new Error(t("history.importInvalid"));
- return refreshReport({ ...r, samples: r.samples.map(s => ({ time: s.time, width: s.width, height: s.height, landmarks: s.landmarks, ...(s.reason ? { reason: s.reason } : {}) })) });
+ // The id ends up in HTML attributes and the name in the history list: accept only what the app itself would write.
+ const id = typeof r.id === "string" && /^[\w-]{1,80}$/.test(r.id) ? r.id : crypto.randomUUID();
+ const createdAt = typeof r.createdAt === "string" && !Number.isNaN(Date.parse(r.createdAt)) ? r.createdAt : new Date().toISOString();
+ const fileName = typeof r.fileName === "string" && r.fileName ? r.fileName.slice(0, 260) : "report.json";
+ return refreshReport({ ...r, id, createdAt, fileName, samples: r.samples.map(s => ({ time: s.time, width: s.width, height: s.height, landmarks: s.landmarks, ...(s.reason ? { reason: s.reason } : {}) })) });
 }
 export async function renderHistory(el: HTMLElement, sport: Sport, hooks: HistoryHooks): Promise<void> {
  el.innerHTML = "<p class=\"muted\">" + t("history.loading") + "</p>";
