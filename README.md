@@ -44,11 +44,23 @@ Chromium: `chrome://extensions` → режим разработчика → «З
 Firefox: `about:debugging#/runtime/this-firefox` → «Загрузить временное дополнение» → `dist/<спорт>/firefox/manifest.json`.
 Разрешений на сайты и content scripts нет; модель, WASM и код внутри пакета.
 
+## Публикация
+
+Сайт с тремя PWA, политика конфиденциальности и условия (en/ru/ro), тексты и ответы для Chrome Web Store, Edge Add-ons,
+Firefox Add-ons и Google Play, скриншоты и промо-графика, Android-обёртка (TWA) — пошагово в [`store/README.md`](store/README.md).
+
+```bash
+npm run store          # проверка текстов магазинов → artifacts/store/<sport>.md
+npm run store:assets   # скриншоты 1280×800 и 1080×1920, плитки, графика Play → artifacts/store/<sport>/
+npm run site           # сайт для публикации → dist/site (нужен заполненный store/config.json)
+npm run twa            # проекты Bubblewrap для Google Play → android/<sport>/
+```
+
 ## Проверки
 
 ```bash
 npm run check        # TypeScript strict
-npm test             # 31 тест: ядро, виды спорта, интерфейс, словари
+npm test             # ядро, виды спорта, интерфейс, словари, тексты магазинов
 npm run e2e -- --fixtures work/fixtures   # браузерный прогон на реальных роликах (Playwright)
 ```
 
@@ -71,3 +83,4 @@ E2E берёт `work/fixtures/cases.json` и ролики VP9/WebM (Chromium б�
 - `src/engine.ts`, `src/pose-worker.ts`, `src/analyzer.ts` — MediaPipe и декодирование.
 - `src/ui/` — отчёт, история, live, выбор спортсмена, PWA, оверлей, графики. `src/i18n/` — ru/en/ro.
 - `scripts/build.mjs` — модели, проверки, 9 сборок; `scripts/e2e.mjs` — браузерный QA; `scripts/qa-firefox.mjs` — расширение Firefox.
+- `store/`, `site/`, `scripts/{site,store,store-assets,twa}.mjs` — публикация (`store/github-pages.yml` — workflow для GitHub Pages).

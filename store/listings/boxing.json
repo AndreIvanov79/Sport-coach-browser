@@ -1,0 +1,33 @@
+{
+  "sport": "boxing",
+  "categories": {
+    "chrome": "Lifestyle → Health & Fitness (or the closest sports/fitness category offered)",
+    "edge": "Sports",
+    "firefox": "Photos, Music & Videos",
+    "play": "Sports"
+  },
+  "en": {
+    "name": "Boxing Coach: strike and guard video analysis",
+    "playTitle": "Boxing Coach: technique",
+    "summary": "Analyse boxing video or your camera on your device: strikes, guard of the other hand, shoulder rotation, stance. No upload.",
+    "playShort": "Strikes, guard and rotation from your boxing video, analysed on your phone.",
+    "amoSummary": "Analyse shadow boxing, bag or pad work and sparring video right in the browser: strikes are found, the guard of the other hand at each strike, shoulder rotation, speed, stance and head movement are measured. The video never leaves your device.",
+    "description": "Boxing Coach analyses your boxing video directly on your device. Choose a file or turn on the camera: the app tracks the body with MediaPipe Pose and reports on every strike.\n\nWhat you get\n• Strikes: arm and leg extensions with a return, each with its moment in the video.\n• Guard of the other hand at the moment of each strike, with the worst moments marked.\n• Shoulder rotation, strike speed (at 20+ frames per second), extension, stance width, head movement.\n• Faults are reported only when they repeat; the main focus for the next session comes first.\n• Sparring and pad work: when several people are in the frame, the app asks who the athlete is and keeps following them by position, size and clothing colour.\n• Player for review: joint angles on the skeleton, slow motion, frame-by-frame stepping, full screen with the skeleton.\n• Live mode with a framing check, countdown and voice prompts (on-device voices only).\n• History on the device, comparison of reports, export to JSON, CSV and PDF.\n\nPrivacy by design\n• Video and results stay on your device: no upload, no server, no account.\n• No ads, no analytics, no trackers.\n• Works offline once opened.\n\nGood to know\n• Strikes are movement patterns found in 2D video, not confirmed hits; camera angle and frame rate matter.\n• People who overlap or stand behind each other cannot always be told apart by the pose model.\n• This is a training aid, not medical advice.\n\nInterface: English, Russian, Romanian."
+  },
+  "ru": {
+    "name": "Boxing Coach: удары и защита по видео",
+    "playTitle": "Boxing Coach: техника",
+    "summary": "Разбор видео бокса или камеры на вашем устройстве: удары, гард второй руки, разворот плеч, стойка. Без загрузки на сервер.",
+    "playShort": "Удары, гард и разворот корпуса по видео бокса — анализ прямо на телефоне.",
+    "amoSummary": "Разбор видео боя с тенью, работы на мешке и лапах, спарринга прямо в браузере: удары находятся, измеряются гард второй руки в момент удара, разворот плеч, скорость, стойка и работа головы. Видео не покидает устройство.",
+    "description": "Boxing Coach разбирает видео вашей тренировки по боксу прямо на устройстве. Выберите файл или включите камеру: приложение отслеживает тело с помощью MediaPipe Pose и даёт отчёт по каждому удару.\n\nЧто вы получите\n• Удары: разгибания руки или ноги с возвратом, у каждого — момент в видео.\n• Гард второй руки в момент каждого удара, худшие моменты отмечены.\n• Разворот плеч, скорость удара (при 20+ кадрах/с), разгибание, ширина стойки, работа головы.\n• Ошибка показывается, только если повторяется; главный фокус на следующую тренировку — первым.\n• Спарринг и лапы: если в кадре несколько человек, приложение спрашивает, кто спортсмен, и ведёт его по положению, размеру и цвету одежды.\n• Плеер для разбора: углы суставов на скелете, замедление, шаг по кадрам, полный экран вместе со скелетом.\n• Live-режим с проверкой кадра, обратным отсчётом и голосовыми подсказками (только локальные голоса устройства).\n• История на устройстве, сравнение отчётов, экспорт в JSON, CSV и PDF.\n\nКонфиденциальность заложена в устройство приложения\n• Видео и результаты остаются на вашем устройстве: никакой загрузки, сервера и аккаунта.\n• Нет рекламы, аналитики и трекеров.\n• После первого открытия работает без интернета.\n\nВажно знать\n• Удары — это найденные в 2D-видео движения, а не подтверждённые попадания; важны ракурс и частота кадров.\n• Перекрывающих друг друга людей модель позы не всегда различает.\n• Это помощник для тренировок, а не медицинская рекомендация.\n\nЯзыки интерфейса: русский, английский, румынский."
+  },
+  "ro": {
+    "name": "Boxing Coach: analiza video a loviturilor",
+    "playTitle": "Boxing Coach: tehnică",
+    "summary": "Analizează pe dispozitiv video de box sau camera: lovituri, garda celeilalte mâini, rotația umerilor, poziția. Fără încărcare.",
+    "playShort": "Lovituri, gardă și rotație din videoclipul de box, analizate pe telefon.",
+    "amoSummary": "Analizează video de box în gol, la sac, la labe sau sparring direct în browser: se găsesc loviturile, se măsoară garda celeilalte mâini la fiecare lovitură, rotația umerilor, viteza, poziția și mișcarea capului. Video-ul rămâne pe dispozitiv.",
+    "description": "Boxing Coach analizează videoclipul antrenamentului de box direct pe dispozitivul tău. Alege un fișier sau pornește camera: aplicația urmărește corpul cu MediaPipe Pose și raportează fiecare lovitură.\n\nCe primești\n• Lovituri: extensii ale brațului sau piciorului cu revenire, fiecare cu momentul din videoclip.\n• Garda celeilalte mâini în momentul fiecărei lovituri, cu momentele cele mai slabe marcate.\n• Rotația umerilor, viteza loviturii (la 20+ cadre pe secundă), extensia, lățimea poziției, mișcarea capului.\n• Greșelile sunt semnalate doar dacă se repetă; prioritatea pentru următorul antrenament apare prima.\n• Sparring și labe: dacă în cadru sunt mai multe persoane, aplicația întreabă cine este sportivul și îl urmărește după poziție, mărime și culoarea hainelor.\n• Player pentru analiză: unghiurile articulațiilor pe schelet, încetinire, pas cu pas, ecran complet cu scheletul.\n• Mod live cu verificarea cadrului, numărătoare inversă și indicații vocale (doar voci locale).\n• Istoric pe dispozitiv, compararea rapoartelor, export JSON, CSV și PDF.\n\nConfidențialitate din construcție\n• Videoclipul și rezultatele rămân pe dispozitiv: fără încărcare, server sau cont.\n• Fără reclame, analize sau trackere.\n• După prima deschidere funcționează fără internet.\n\nDe știut\n• Loviturile sunt tipare de mișcare găsite în video 2D, nu lovituri confirmate; contează unghiul și numărul de cadre.\n• Persoanele care se suprapun nu pot fi mereu deosebite de modelul de postură.\n• Este un ajutor pentru antrenament, nu un sfat medical.\n\nLimbi: română, engleză, rusă."
+  }
+}

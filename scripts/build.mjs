@@ -4,7 +4,11 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { build } from "vite";
 import assert from "node:assert/strict";
+import { LANGS, loadListings, listingProblems } from "./store-lib.mjs";
 const root = process.cwd(), argv = process.argv;
+// Store texts (store/listings) give the localized extension name and description; npm run store checks the limits.
+const listings = await loadListings(), listingIssues = listingProblems(listings);
+if (listingIssues.length) throw new Error("store/listings: " + listingIssues.join("; "));
 const appVersion = JSON.parse(await fs.readFile("package.json", "utf8")).version;
 const mpVersion = JSON.parse(await fs.readFile("node_modules/@mediapipe/tasks-vision/package.json", "utf8")).version;
 const variants = { boxing: { name: "Boxing Coach", color: "#ffb49b" }, fitness: { name: "Fitness Coach", color: "#c6ef73" }, rg: { name: "Rhythm Coach", color: "#c3b1ff" } };
@@ -71,7 +75,7 @@ for (const [sport, config] of Object.entries(variants)) {
  await fs.copyFile("work/worker/pose-worker.js", output + "/pose-worker.js");
  let html = await fs.readFile(output + "/index.html", "utf8"); html = html.replace("<title>Sport Coach</title>", "<title>" + config.name + "</title>"); await fs.writeFile(output + "/index.html", html);
  const icons = [192, 512].flatMap(s => [{ src: "icons/icon-" + s + ".png", sizes: s + "x" + s, type: "image/png", purpose: "any" }, { src: "icons/maskable-" + s + ".png", sizes: s + "x" + s, type: "image/png", purpose: "maskable" }]);
- const manifest = { id: "./", name: config.name, short_name: config.name, start_url: "./", scope: "./", display: "standalone", lang: "ru", background_color: "#121619", theme_color: "#121619", categories: ["sports", "health", "fitness"], description: "On-device sports video analysis with MediaPipe. Video never leaves the device.", icons, shortcuts: [{ name: "Live", url: "./#live", icons: [{ src: "icons/icon-192.png", sizes: "192x192", type: "image/png" }] }] };
+ const manifest = { id: "./", name: config.name, short_name: config.name, start_url: "./", scope: "./", display: "standalone", lang: "en", background_color: "#121619", theme_color: "#121619", categories: ["sports", "health", "fitness"], description: listings[sport].en.summary, icons, shortcuts: [{ name: "Live", url: "./#live", icons: [{ src: "icons/icon-192.png", sizes: "192x192", type: "image/png" }] }] };
  await fs.writeFile(output + "/manifest.webmanifest", JSON.stringify(manifest, null, 2));
  await fs.copyFile("THIRD_PARTY_NOTICES.md", output + "/THIRD_PARTY_NOTICES.md"); await fs.cp("licenses", output + "/licenses", { recursive: true });
  const assets = (await walk(output)).sort(), fingerprint = createHash("sha256");
@@ -82,10 +86,14 @@ for (const [sport, config] of Object.entries(variants)) {
  for (const browser of ["chromium", "firefox"]) {
   const target = "dist/" + sport + "/" + browser; await fs.rm(target, { recursive: true, force: true }); await fs.cp(output, target, { recursive: true }); await fs.rm(target + "/sw.js");
   await fs.writeFile(target + "/background.js", "const api=globalThis.browser||chrome;api.action.onClicked.addListener(()=>{api.tabs.create({url:api.runtime.getURL(\"index.html\")});});");
-  const ext = { manifest_version: 3, name: config.name, version: appVersion, description: "On-device sports video analysis: file or camera, MediaPipe, local report. No data leaves the device.", icons: { 16: "icons/icon-16.png", 32: "icons/icon-32.png", 48: "icons/icon-48.png", 128: "icons/icon-128.png" }, action: { default_title: config.name, default_icon: { 16: "icons/icon-16.png", 32: "icons/icon-32.png" } }, background: browser === "chromium" ? { service_worker: "background.js" } : { scripts: ["background.js"] }, content_security_policy: { extension_pages: csp }, ...(browser === "chromium" ? { minimum_chrome_version: "116" } : { browser_specific_settings: { gecko: { id: sport + "@sport-coach.local", strict_min_version: "128.0", data_collection_permissions: { required: ["none"] } } } }) };
+  for (const lang of LANGS) {
+   const l = listings[sport][lang], messages = { appName: { message: l.name, description: "Extension name in the browser and the store" }, appShort: { message: config.name, description: "Toolbar button title" }, appDesc: { message: l.summary, description: "Store summary (max 132 characters)" } };
+   await fs.mkdir(target + "/_locales/" + lang, { recursive: true }); await fs.writeFile(target + "/_locales/" + lang + "/messages.json", JSON.stringify(messages, null, 2));
+  }
+  const ext = { manifest_version: 3, name: "__MSG_appName__", short_name: "__MSG_appShort__", default_locale: "en", version: appVersion, description: "__MSG_appDesc__", icons: { 16: "icons/icon-16.png", 32: "icons/icon-32.png", 48: "icons/icon-48.png", 128: "icons/icon-128.png" }, action: { default_title: "__MSG_appShort__", default_icon: { 16: "icons/icon-16.png", 32: "icons/icon-32.png" } }, background: browser === "chromium" ? { service_worker: "background.js" } : { scripts: ["background.js"] }, content_security_policy: { extension_pages: csp }, ...(browser === "chromium" ? { minimum_chrome_version: "116" } : { browser_specific_settings: { gecko: { id: sport + "@sport-coach.local", strict_min_version: "140.0", data_collection_permissions: { required: ["none"] } } } }) };
   await fs.writeFile(target + "/manifest.json", JSON.stringify(ext, null, 2));
   assert.equal(ext.permissions, undefined); assert.equal(ext.host_permissions, undefined); assert.ok(ext.content_security_policy.extension_pages.includes("connect-src 'self'"));
-  for (const asset of ["index.html", "pose-worker.js", "background.js", "models/pose_landmarker_lite.task", ...Object.values(ext.icons)]) await fs.access(target + "/" + asset);
+  for (const asset of ["index.html", "pose-worker.js", "background.js", "models/pose_landmarker_lite.task", ...Object.values(ext.icons), ...LANGS.map(l => "_locales/" + l + "/messages.json")]) await fs.access(target + "/" + asset);
   const page = await fs.readFile(target + "/index.html", "utf8"); assert.ok(!/<script[^>]+src=["\x27]https?:/i.test(page));
   for (const m of available) assert.equal(createHash("sha256").update(await fs.readFile(target + "/models/" + m.file)).digest("hex"), lock.models[m.id].sha256);
   checks.push({ sport, target: browser, files: (await walk(target)).length, models: available.map(m => m.id), permissions: [], remoteCode: false });

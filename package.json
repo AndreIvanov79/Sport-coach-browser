@@ -10,7 +10,11 @@
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "check": "tsc --noEmit",
     "preview": "node scripts/serve.mjs",
-    "e2e": "node scripts/e2e.mjs"
+    "e2e": "node scripts/e2e.mjs",
+    "store": "node scripts/store.mjs",
+    "store:assets": "node scripts/store-assets.mjs",
+    "site": "node scripts/site.mjs",
+    "twa": "node scripts/twa.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "0.10.32"

@@ -1,0 +1,20 @@
+{
+  "_comment": "Fill these in before publishing (see store/README.md). npm run site and npm run twa refuse to produce public files while a value still starts with YOUR_.",
+  "siteUrl": "https://YOUR_DOMAIN",
+  "contactEmail": "YOUR_EMAIL",
+  "developerName": "YOUR_NAME",
+  "policyDate": "2026-10-22",
+  "androidPackagePrefix": "YOUR_REVERSED_DOMAIN.sportcoach",
+  "playSigningSha256": {
+    "_comment": "Play Console → Test and release → App integrity → App signing: copy the SHA-256 of the app signing key (and of the upload key) for each app.",
+    "fitness": [],
+    "boxing": [],
+    "rg": []
+  },
+  "storeLinks": {
+    "_comment": "Store pages once the apps are published; the landing page shows only the links filled in here.",
+    "fitness": { "chrome": "", "edge": "", "firefox": "", "play": "" },
+    "boxing": { "chrome": "", "edge": "", "firefox": "", "play": "" },
+    "rg": { "chrome": "", "edge": "", "firefox": "", "play": "" }
+  }
+}

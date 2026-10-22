@@ -1,0 +1,51 @@
+# Publishes the website (landing page, three PWAs, privacy policy, terms, assetlinks.json) to GitHub Pages.
+# Copy this file to .github/workflows/pages.yml to enable it (see store/README.md, section 2).
+# One-time setup: repository Settings → Pages → Source: "GitHub Actions"; fill in store/config.json.
+# For Google Play the site must be at the root of its domain: a repository named <user>.github.io or a custom domain.
+name: pages
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      assetlinks: ${{ steps.site.outputs.assetlinks }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      # Type check, unit tests, the three PWAs; downloads the pinned MediaPipe models (SHA-256 from assets-lock.json).
+      - run: npm run build
+      # Fails while store/config.json still has YOUR_ values.
+      - id: site
+        run: |
+          npm run site
+          echo "assetlinks=$(test -f dist/site/.well-known/assetlinks.json && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist/site
+          # /.well-known/assetlinks.json is a hidden folder: without this Google Play cannot verify the apps.
+          include-hidden-files: true
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+      - name: Check that assetlinks.json is served
+        if: needs.build.outputs.assetlinks == 'yes'
+        run: curl -fsS --retry 6 --retry-delay 10 --retry-all-errors "${{ steps.deployment.outputs.page_url }}.well-known/assetlinks.json"

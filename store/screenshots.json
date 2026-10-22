@@ -1,0 +1,7 @@
+{
+  "_comment": "Clips for npm run store:assets. Put your own videos (with the consent of everyone in them) into clipsDir; the folder is not committed. 'at' is the moment shown in the player screenshot, in seconds. Chromium without proprietary codecs (Playwright's own) needs WebM; with --chrome /path/to/google-chrome MP4 works too.",
+  "clipsDir": "work/store-clips",
+  "fitness": { "file": "fitness.webm", "exercise": "auto", "fps": 15, "model": "full", "at": 1.5 },
+  "boxing": { "file": "boxing.webm", "exercise": "auto", "fps": 15, "model": "full", "at": 6 },
+  "rg": { "file": "rg.webm", "exercise": "auto", "fps": 15, "model": "full", "at": 8 }
+}

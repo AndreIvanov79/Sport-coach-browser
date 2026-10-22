@@ -1,9 +1,10 @@
 // Local preview of the built apps: node scripts/serve.mjs (npm run preview). Keep this terminal open while you use
 // the apps; the PWAs that were already opened keep working from their offline cache, the others need the server.
+// npm run preview -- --site serves the assembled website (npm run site) exactly as it will be published.
 import http from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
-const root = path.resolve("dist"), port = Number(process.env.PORT || 4173), host = "127.0.0.1";
+const site = process.argv.includes("--site"), root = path.resolve(site ? "dist/site" : "dist"), port = Number(process.env.PORT || 4173), host = "127.0.0.1";
 const SPORTS = [["fitness", "Fitness Coach"], ["boxing", "Boxing Coach"], ["rg", "Rhythm Coach"]];
 const types = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".wasm": "application/wasm", ".task": "application/octet-stream", ".json": "application/json", ".webmanifest": "application/manifest+json", ".svg": "image/svg+xml", ".png": "image/png", ".md": "text/markdown; charset=utf-8", ".txt": "text/plain; charset=utf-8" };
 const exists = async file => { try { return await fs.stat(file); } catch { return null; } };
@@ -17,16 +18,17 @@ const index = async () => {
 export const server = http.createServer(async (req, res) => {
  try {
   const pathname = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
-  if (pathname === "/") { res.writeHead(200, { "Content-Type": types[".html"], "Cache-Control": "no-cache" }).end(await index()); return; }
+  if (pathname === "/" && !site) { res.writeHead(200, { "Content-Type": types[".html"], "Cache-Control": "no-cache" }).end(await index()); return; }
   let file = path.resolve(root, "." + pathname);
-  if (!file.startsWith(root + path.sep)) { res.writeHead(403).end(); return; }
+  if (file !== root && !file.startsWith(root + path.sep)) { res.writeHead(403).end(); return; }
   const stat = await exists(file);
   // /rg/pwa without the slash would load ./assets from /rg/ and show a blank page.
   if (stat?.isDirectory() && !pathname.endsWith("/")) { res.writeHead(301, { Location: pathname + "/" }).end(); return; }
   if (stat?.isDirectory()) file = path.join(file, "index.html");
   const data = await fs.readFile(file);
   res.writeHead(200, { "Content-Type": types[path.extname(file)] || "application/octet-stream", "Cache-Control": "no-cache" }).end(data);
- } catch { res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("Not found. Open http://" + host + ":" + port + "/ for the list of apps."); }
+ } catch { if (site) { const page = await fs.readFile(path.join(root, "404.html")).catch(() => "Not found"); res.writeHead(404, { "Content-Type": types[".html"] }).end(page); return; }
+  res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("Not found. Open http://" + host + ":" + port + "/ for the list of apps."); }
 });
 server.on("error", error => {
  if (error.code === "EADDRINUSE") console.error(`Port ${port} is already in use: another preview is probably running (open http://${host}:${port}/), or start this one with PORT=4174 npm run preview.`);
@@ -34,7 +36,7 @@ server.on("error", error => {
  process.exit(1);
 });
 server.listen(port, host, async () => {
- if (!(await exists(root))) console.warn("dist/ is missing: run npm run build first.");
+ if (!(await exists(root))) console.warn(site ? "dist/site is missing: run npm run site first." : "dist/ is missing: run npm run build first.");
  console.log(`Local preview (keep this terminal open, Ctrl+C to stop): http://${host}:${port}/`);
- for (const [id, name] of SPORTS) console.log(`  ${name.padEnd(14)} http://${host}:${port}/${id}/pwa/`);
+ for (const [id, name] of SPORTS) console.log(`  ${name.padEnd(14)} http://${host}:${port}/${id}/${site ? "" : "pwa/"}`);
 });

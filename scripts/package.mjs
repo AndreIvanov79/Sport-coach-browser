@@ -18,6 +18,6 @@ for(const sport of ['boxing','fitness','rg'])for(const target of ['pwa','chromiu
  const dir='dist/'+sport+'/'+target;const entries=(await files(dir)).map(name=>({name,path:path.join(dir,name)}));
  await zipFiles('artifacts/packages/'+sport+'-'+target+'.zip',entries);
 }
-const sourceNames=['package.json','package-lock.json','tsconfig.json','index.html','.gitignore','assets-lock.json','README.md','THIRD_PARTY_NOTICES.md',...(await files('src')).map(n=>'src/'+n),...(await files('scripts')).map(n=>'scripts/'+n),...(await files('tests')).map(n=>'tests/'+n),...(await files('docs')).map(n=>'docs/'+n),...(await files('licenses')).map(n=>'licenses/'+n),...(await files('assets')).map(n=>'assets/'+n),'.github/workflows/ci.yml'];
+const sourceNames=['package.json','package-lock.json','tsconfig.json','index.html','.gitignore','assets-lock.json','README.md','THIRD_PARTY_NOTICES.md',...(await files('src')).map(n=>'src/'+n),...(await files('scripts')).map(n=>'scripts/'+n),...(await files('tests')).map(n=>'tests/'+n),...(await files('docs')).map(n=>'docs/'+n),...(await files('licenses')).map(n=>'licenses/'+n),...(await files('assets')).map(n=>'assets/'+n),...(await files('store/listings')).map(n=>'store/listings/'+n),'.github/workflows/ci.yml'];
 await zipFiles('artifacts/packages/sport-coach-source.zip',sourceNames.map(name=>({name,path:name})));
 console.log('Packaged 9 apps and source archive under artifacts/packages/');
