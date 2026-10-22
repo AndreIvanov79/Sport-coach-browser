@@ -14,6 +14,7 @@ import { LiveSession } from "./ui/live.ts";
 import { multiFrames, pickAthlete } from "./ui/picker.ts";
 import { idle, refreshPwaTexts, setupPwa } from "./ui/pwa.ts";
 import { bindFullscreen } from "./ui/fullscreen.ts";
+import { watchFrozenFrames } from "./ui/stall.ts";
 const profile = profiles[__SPORT__], app = document.querySelector<HTMLDivElement>("#app")!;
 const extension = location.protocol.endsWith("-extension:");
 const models = availableModels();
@@ -140,6 +141,7 @@ function setFile(next: File, recordedDuration?: number, keepReport = false) {
  applyI18n(); updateControls(); if (keepReport && report) { startOverlay(); renderCurrent(); }
 }
 player.addEventListener("error", () => { if (player.getAttribute("src")) fail(new Error(t("err.decode"))); });
+watchFrozenFrames(player);
 const choose = () => { if (!controller) $<HTMLInputElement>("file-input").click(); };
 $("source-file").onclick = choose; $("dropzone").onclick = choose; $("replace-file").onclick = choose;
 $<HTMLInputElement>("file-input").onchange = event => { const input = event.target as HTMLInputElement; if (input.files?.[0]) setFile(input.files[0]); input.value = ""; };
