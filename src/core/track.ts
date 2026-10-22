@@ -41,7 +41,37 @@ export const multiPersonFrames = (samples: Sample[]): number[] => samples.map((s
 /** MediaPipe sometimes reports a ghost second person for a frame or two (a bag, a reflection); a choice is only
  * meaningful when several people were seen in at least 3 frames and 2% of the clip. */
 export const choosableAthlete = (samples: Sample[]): boolean => multiPersonFrames(samples).length >= Math.max(3, Math.ceil(.02 * samples.length));
-export function trackAthlete(input: Sample[], seed?: Seed): { samples: Sample[]; athlete: Athlete } {
+type Box = { x0: number; y0: number; x1: number; y1: number; h: number };
+const iou = (a: Box, b: Box) => {
+ const ix = Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0)), iy = Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0)), inter = ix * iy;
+ const union = (a.x1 - a.x0) * (a.y1 - a.y0) + (b.x1 - b.x0) * (b.y1 - b.y0) - inter; return union > 0 ? inter / union : 0;
+};
+/** MediaPipe sometimes returns the same person twice (two skeletons on one boxer). Poses whose boxes overlap
+ * strongly and whose joints mostly coincide are one person: the more visible one is kept. Two people in a clinch
+ * overlap too, but their joints (heads, shoulders) are apart. Returns the kept indices in their original order. */
+export function distinctPoses(poses: Landmark[][], w: number, h: number): number[] {
+ const boxes = poses.map(p => { const g = personGeometry(p, w, h); return g ? { x0: g.minX, y0: g.minY, x1: g.maxX, y1: g.maxY, h: g.height } : null; });
+ const vis = poses.map(p => p.reduce((s, q) => s + (q?.visibility ?? 0), 0)), kept: number[] = [];
+ for (const i of poses.map((_, k) => k).sort((a, z) => vis[z] - vis[a])) {
+  const same = kept.some(j => {
+   const a = boxes[i], b = boxes[j]; if (!a || !b) return false;
+   const o = iou(a, b); if (o < .5) return false;
+   const d: number[] = [];
+   for (let k = 0; k < 33; k++) { const p = poses[i][k], q = poses[j][k]; if (p && q && (p.visibility ?? 0) >= .5 && (q.visibility ?? 0) >= .5) d.push(Math.hypot((p.x - q.x) * w, (p.y - q.y) * h)); }
+   if (d.length < 5) return o > .7;
+   d.sort((x, y) => x - y); return d[d.length >> 1] < .2 * Math.max(a.h, b.h);
+  });
+  if (!same) kept.push(i);
+ }
+ return kept.sort((a, z) => a - z);
+}
+const withoutDuplicates = (s: Sample): Sample => {
+ if (!s.candidates || s.candidates.length < 2) return s;
+ const keep = distinctPoses(s.candidates, s.width, s.height); if (keep.length === s.candidates.length) return s;
+ return { ...s, candidates: keep.map(k => s.candidates![k]), looks: s.looks ? keep.map(k => s.looks![k]) : s.looks };
+};
+export function trackAthlete(raw: Sample[], seed?: Seed): { samples: Sample[]; athlete: Athlete } {
+ const input = raw.map(withoutDuplicates);
  const people = Math.max(0, ...input.map(s => s.candidates?.length ?? (s.landmarks.length ? 1 : 0)));
  const hasCandidates = input.some(s => s.candidates);
  if (!hasCandidates) {

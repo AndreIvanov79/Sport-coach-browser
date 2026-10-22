@@ -4,7 +4,7 @@ import { angle } from "../src/core/geometry.ts";
 import { buildBody, observed } from "../src/core/body.ts";
 import { metricsFor, seriesOf } from "../src/core/series.ts";
 import { detectCycles, inferInverted, pickDriver } from "../src/core/cycles.ts";
-import { choosableAthlete, trackAthlete } from "../src/core/track.ts";
+import { choosableAthlete, distinctPoses, trackAthlete } from "../src/core/track.ts";
 import { lookDistance, sampleLooks } from "../src/core/appearance.ts";
 import { classifyView } from "../src/core/view.ts";
 import { makeReport, refreshReport } from "../src/core/report.ts";
@@ -85,4 +85,12 @@ test("a ghost second person in a couple of frames does not count as several peop
  assert.equal(choosableAthlete(pair), true);
  const r = makeReport({ sport: "boxing", exercise: "auto", fileName: "g.mp4", samples: ghost, fps: 15, threshold: .65, elapsedMs: 1, duration: 100 / 15 });
  assert.ok(!r.findings.some(f => f.code === "athlete_auto"));
+});
+test("two skeletons on one person are merged, two people in a clinch are kept", () => {
+ const a = pose({ scale: .6 }), twin = a.map(p => ({ ...p, x: p.x + .01, visibility: p.visibility * .9 }));
+ assert.deepEqual(distinctPoses([a, twin], 1000, 1000), [0]);
+ // Clinch: boxes overlap a lot, but heads and shoulders are apart.
+ const b = pose({ scale: .6, dx: .12 });
+ assert.deepEqual(distinctPoses([a, b], 1000, 1000), [0, 1]);
+ const s = samples(30, 15, () => [a, twin]); assert.equal(trackAthlete(s).athlete.people, 1);
 });

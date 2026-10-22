@@ -7,7 +7,7 @@ import { makeReport } from "./core/report.ts";
 import { persistStorage, saveReport } from "./storage.ts";
 import { LANGS, LANG_NAMES, getLang, setLang, t } from "./i18n/index.ts";
 import { $, download, esc, formatTime, icon, toast } from "./ui/dom.ts";
-import { drawLandmarks, drawMini, drawPose, videoBox } from "./ui/overlay.ts";
+import { PEOPLE, drawLandmarks, drawMini, drawPose, videoBox } from "./ui/overlay.ts";
 import { renderReport } from "./ui/report-view.ts";
 import { renderHistory } from "./ui/history-view.ts";
 import { LiveSession } from "./ui/live.ts";
@@ -182,7 +182,7 @@ function pickLayer(sample: Report["samples"][number] | undefined) {
  const show = !!report && choosable && player.paused && !!sample?.candidates && sample.candidates.length > 1 && !!vw && !!vh;
  if (show) {
   const ctx = overlay.getContext("2d"), box = videoBox(overlay, vw, vh);
-  if (ctx) sample!.candidates!.forEach(lms => { if (lms !== sample!.landmarks) drawLandmarks(ctx, lms, box, { accent: "#ffffff", threshold: .5, dim: true }, { w: sample!.width || vw, h: sample!.height || vh }); });
+  if (ctx) sample!.candidates!.forEach((lms, k) => { if (lms !== sample!.landmarks) drawLandmarks(ctx, lms, box, { accent: PEOPLE[k % PEOPLE.length], threshold: .5, dim: true }, { w: sample!.width || vw, h: sample!.height || vh }); });
  }
  const key = show ? report!.id + ":" + sample!.time + ":" + overlay.clientWidth + "x" + overlay.clientHeight + ":" + report!.athlete.seed?.index + "/" + report!.athlete.seed?.candidate : "";
  if (key === pickKey) return; pickKey = key; layer.innerHTML = "";
@@ -192,7 +192,7 @@ function pickLayer(sample: Report["samples"][number] | undefined) {
   if (k === current) return;
   const g = personGeometry(lms, s.width || vw, s.height || vh); if (!g) return;
   const sx = box.w / (s.width || vw), sy = box.h / (s.height || vh), pad = 10;
-  const b = document.createElement("button"); b.type = "button"; b.className = "pick-person";
+  const b = document.createElement("button"); b.type = "button"; b.className = "pick-person"; b.style.setProperty("--c", PEOPLE[k % PEOPLE.length]);
   b.style.left = (box.ox + g.minX * sx - pad) + "px"; b.style.top = (box.oy + g.minY * sy - pad) + "px";
   b.style.width = ((g.maxX - g.minX) * sx + 2 * pad) + "px"; b.style.height = ((g.maxY - g.minY) * sy + 2 * pad) + "px";
   b.innerHTML = "<span>" + esc(t("player.pickThis")) + "</span>"; b.setAttribute("aria-label", t("player.pickThis"));
@@ -206,7 +206,7 @@ function chooseAthlete(seed: Seed) {
 }
 async function choosePerson(auto: boolean) {
  const r = report; if (!r || !file || !canChoose(r)) return;
- const seed = await pickAthlete(r, player, profile.accent, auto);
+ const seed = await pickAthlete(r, player, auto);
  if (seed && report === r) chooseAthlete(seed);
 }
 function startOverlay() {

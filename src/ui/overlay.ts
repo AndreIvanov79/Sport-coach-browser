@@ -42,19 +42,29 @@ export function drawPose(canvas: HTMLCanvasElement, video: HTMLVideoElement, sam
  drawLandmarks(ctx, sample.landmarks, videoBox(canvas, video.videoWidth, video.videoHeight), style, { w: sample.width || video.videoWidth, h: sample.height || video.videoHeight });
 }
 /** All detected people with numbered boxes (athlete picker). Returns hit boxes in canvas CSS pixels. */
-export function drawCandidates(canvas: HTMLCanvasElement, vw: number, vh: number, candidates: Landmark[][], accent: string, selected: number | null, threshold: number): { x0: number; y0: number; x1: number; y1: number }[] {
+/** High-contrast colours for telling people apart (cyan, yellow, magenta), the same in the picker and the player. */
+export const PEOPLE = ["#00e5ff", "#ffe600", "#ff3edb"];
+/** All detected people with numbered boxes (athlete picker). Returns hit boxes in canvas CSS pixels. */
+export function drawCandidates(canvas: HTMLCanvasElement, vw: number, vh: number, candidates: Landmark[][], selected: number | null, threshold: number, selectedLabel: string): { x0: number; y0: number; x1: number; y1: number }[] {
  const ctx = prepare(canvas); if (!ctx) return [];
  const box = videoBox(canvas, vw, vh), hits: { x0: number; y0: number; x1: number; y1: number }[] = [];
- candidates.forEach((lms, k) => {
-  const g = personGeometry(lms, 1, 1); if (!g) { hits.push({ x0: 0, y0: 0, x1: 0, y1: 0 }); return; }
-  const x0 = box.ox + g.minX * box.w - 8, y0 = box.oy + g.minY * box.h - 8, x1 = box.ox + g.maxX * box.w + 8, y1 = box.oy + g.maxY * box.h + 8;
-  hits.push({ x0, y0, x1, y1 });
-  const color = k === selected ? accent : "#ffffff";
-  drawLandmarks(ctx, lms, box, { accent: color, threshold: Math.min(threshold, .5), dim: k !== selected }, { w: vw, h: vh });
-  ctx.strokeStyle = color; ctx.setLineDash(k === selected ? [] : [6, 5]); ctx.lineWidth = 2; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0); ctx.setLineDash([]);
-  ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x0 + 14, y0 + 14, 13, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#111"; ctx.font = "700 14px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(String(k + 1), x0 + 14, y0 + 15); ctx.textAlign = "start";
- });
+ // Unselected first, so the chosen person's box and skeleton are drawn on top.
+ const order = candidates.map((_, k) => k).sort((a, z) => (a === selected ? 1 : 0) - (z === selected ? 1 : 0));
+ candidates.forEach(lms => { const g = personGeometry(lms, 1, 1); hits.push(g ? { x0: box.ox + g.minX * box.w - 8, y0: box.oy + g.minY * box.h - 8, x1: box.ox + g.maxX * box.w + 8, y1: box.oy + g.maxY * box.h + 8 } : { x0: 0, y0: 0, x1: 0, y1: 0 }); });
+ for (const k of order) {
+  const h = hits[k]; if (h.x1 === 0) continue;
+  const color = PEOPLE[k % PEOPLE.length], on = k === selected;
+  if (on) { ctx.fillStyle = color + "26"; ctx.fillRect(h.x0, h.y0, h.x1 - h.x0, h.y1 - h.y0); }
+  drawLandmarks(ctx, candidates[k], box, { accent: color, threshold: Math.min(threshold, .5), dim: !on && selected !== null }, { w: vw, h: vh });
+  ctx.strokeStyle = color; ctx.lineWidth = on ? 4 : 2.5; ctx.setLineDash(on ? [] : [8, 6]);
+  ctx.shadowColor = "#000"; ctx.shadowBlur = 6; ctx.strokeRect(h.x0, h.y0, h.x1 - h.x0, h.y1 - h.y0); ctx.setLineDash([]);
+  ctx.fillStyle = color; ctx.beginPath(); ctx.arc(h.x0 + 16, h.y0 + 16, 15, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+  ctx.fillStyle = "#000"; ctx.font = "800 16px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(String(k + 1), h.x0 + 16, h.y0 + 17); ctx.textAlign = "start";
+  if (on && selectedLabel) {
+   ctx.font = "700 12px system-ui"; const w = ctx.measureText(selectedLabel).width + 12;
+   ctx.fillStyle = color; ctx.fillRect(h.x0 + 36, h.y0 + 6, w, 20); ctx.fillStyle = "#000"; ctx.fillText(selectedLabel, h.x0 + 42, h.y0 + 17);
+  }
+ }
  return hits;
 }
 /** Small stick figure for progress feedback. */
