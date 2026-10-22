@@ -35,7 +35,11 @@ for (const c of cases) {
  const started = Date.now();
  await page.click("#analyze");
  await page.waitForFunction(() => !window.__sportCoach.busy() && (window.__sportCoach.report() || !document.getElementById("error").hidden), null, { timeout: 600000 });
- const r = await page.evaluate(() => { const x = window.__sportCoach.report(); if (!x) return { error: document.getElementById("error").textContent }; return { samples: x.samples.length, duration: x.duration, decode: x.decode, coverage: x.coverage, people: x.athlete.people, selection: x.athlete.selection, lost: x.athlete.lostFrames, view: x.view.kind, driver: x.driver, cycles: x.cycles.length, findings: x.findings.map(f => f.code + (f.focus ? "*" : "")), model: document.getElementById("model")?.value, pickButton: !!document.getElementById("pick-athlete"), scalars: Object.fromEntries(x.scalars.filter(s => s.value !== null).map(s => [s.id, Math.round(s.value * 100) / 100])), exercise: x.exerciseInfo ? { detected: x.exerciseInfo.detected, status: x.exerciseInfo.status, candidates: x.exerciseInfo.candidates } : null, strikes: x.strikes?.length ?? null, events: x.rg ? x.rg.events.map(e => e.action + ":" + e.element + "@" + e.peak.toFixed(1) + (e.turns ? "x" + e.turns : "") + (e.hold !== null ? " hold " + e.hold.toFixed(2) : "")) : null, score: x.rg ? { d: x.rg.score.d.value, e: x.rg.score.e.total, review: x.rg.score.e.review, mode: x.rg.score.mode } : null }; });
+ // Several people: the "who is the athlete" dialog opens by itself right after the analysis.
+ await page.waitForTimeout(700);
+ const pickerAuto = await page.evaluate(() => document.getElementById("picker-dialog").open);
+ if (pickerAuto) { await page.click("#picker-cancel"); await page.waitForTimeout(200); }
+ const r = await page.evaluate(() => { const x = window.__sportCoach.report(); if (!x) return { error: document.getElementById("error").textContent }; return { samples: x.samples.length, duration: x.duration, decode: x.decode, coverage: x.coverage, people: x.athlete.people, selection: x.athlete.selection, lost: x.athlete.lostFrames, view: x.view.kind, driver: x.driver, cycles: x.cycles.length, findings: x.findings.map(f => f.code + (f.focus ? "*" : "")), model: document.getElementById("model")?.value, pickButton: !!document.getElementById("pick-athlete"), pickerAuto: false, scalars: Object.fromEntries(x.scalars.filter(s => s.value !== null).map(s => [s.id, Math.round(s.value * 100) / 100])), exercise: x.exerciseInfo ? { detected: x.exerciseInfo.detected, status: x.exerciseInfo.status, candidates: x.exerciseInfo.candidates } : null, strikes: x.strikes?.length ?? null, events: x.rg ? x.rg.events.map(e => e.action + ":" + e.element + "@" + e.peak.toFixed(1) + (e.turns ? "x" + e.turns : "") + (e.hold !== null ? " hold " + e.hold.toFixed(2) : "")) : null, score: x.rg ? { d: x.rg.score.d.value, e: x.rg.score.e.total, review: x.rg.score.e.review, mode: x.rg.score.mode } : null }; });
  if (process.argv.includes("--dump")) await fs.writeFile(path.join(out, c.name + ".report.json"), await page.evaluate(() => JSON.stringify(window.__sportCoach.report())));
  const text = await page.locator("#report-section").innerText().catch(() => "");
  const rawKeys = [...text.matchAll(/\b(?:f|s|sd|m|md|rg\.el|ex|exn|app|report|sum)\.[a-z][\w.]*\b/g)].map(m => m[0]).filter(k => !/\.(mp4|webm|json|csv)$/.test(k));
@@ -47,6 +51,7 @@ for (const c of cases) {
   if (fsState.el !== "video-wrap" || fsState.canvas !== fsState.view) errors.push("fullscreen: " + JSON.stringify(fsState));
   await page.keyboard.press("KeyF"); await page.waitForTimeout(300);
  }
+ if (!r.error) r.pickerAuto = pickerAuto;
  results.push({ name: c.name, sport: c.sport, file: c.file, wallMs: Date.now() - started, ...r, rawKeys: [...new Set(rawKeys)].slice(0, 10), errors });
  console.log(c.name, JSON.stringify(results[results.length - 1]));
  await context.close();

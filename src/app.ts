@@ -1,5 +1,5 @@
 import "./style.css";
-import type { Lang, ModelId, Report } from "./types.ts";
+import type { Lang, ModelId, Report, Seed } from "./types.ts";
 import { profiles } from "./profiles.ts";
 import { AnalysisAborted, analyzeVideo } from "./analyzer.ts";
 import { EngineError, availableModels } from "./engine.ts";
@@ -7,11 +7,12 @@ import { makeReport } from "./core/report.ts";
 import { persistStorage, saveReport } from "./storage.ts";
 import { LANGS, LANG_NAMES, getLang, setLang, t } from "./i18n/index.ts";
 import { $, download, esc, formatTime, icon, toast } from "./ui/dom.ts";
-import { drawMini, drawPose } from "./ui/overlay.ts";
+import { drawLandmarks, drawMini, drawPose, videoBox } from "./ui/overlay.ts";
 import { renderReport } from "./ui/report-view.ts";
 import { renderHistory } from "./ui/history-view.ts";
 import { LiveSession } from "./ui/live.ts";
-import { canChoose, pickAthlete } from "./ui/picker.ts";
+import { canChoose, currentCandidate, pickAthlete } from "./ui/picker.ts";
+import { personGeometry } from "./core/track.ts";
 import { idle, refreshPwaTexts, setupPwa } from "./ui/pwa.ts";
 import { bindFullscreen } from "./ui/fullscreen.ts";
 import { watchFrozenFrames } from "./ui/stall.ts";
@@ -55,7 +56,7 @@ app.innerHTML = `
      <div class="source-tabs" role="group"><button id="source-file" class="selected">${icon("upload", 17)} <span data-i18n="app.uploadFile"></span></button><button id="source-camera">${icon("live", 17)} <span data-i18n="app.liveCamera"></span></button></div>
      <input type="file" id="file-input" accept="video/*" hidden><input type="file" id="attach-input" accept="video/*" hidden>
      <button class="dropzone" id="dropzone"><div class="motion-art" aria-hidden="true"><svg viewBox="0 0 240 140" fill="none"><ellipse cx="120" cy="117" rx="76" ry="9" stroke="currentColor" opacity=".15"/><path d="M51 43v-15h15m108 0h15v15M51 86v15h15m108 0h15V86" stroke="currentColor" opacity=".4"/><g stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="128" cy="29" r="9"/><path d="m125 43-14 29 28 20 17 25m-45-45-27 25-22 14m56-57 26 10 21-21m-40 0-27 8-16-15"/></g><g fill="currentColor"><circle cx="111" cy="72" r="4"/><circle cx="139" cy="92" r="4"/><circle cx="84" cy="97" r="4"/><circle cx="144" cy="64" r="4"/><circle cx="98" cy="51" r="4"/></g></svg></div><strong data-i18n="app.drop"></strong><span data-i18n="app.dropOr"></span><small data-i18n="app.formats"></small></button>
-     <div id="player-section" hidden><div class="video-wrap" id="video-wrap" tabindex="0"><video id="player" controls playsinline preload="metadata"></video><canvas id="pose-overlay" aria-hidden="true"></canvas><span class="video-label" id="video-label"></span><button class="video-fs" id="fullscreen" type="button" data-i18n-aria="app.fullscreen">${icon("expand", 18)}</button></div>
+     <div id="player-section" hidden><div class="video-wrap" id="video-wrap" tabindex="0"><video id="player" controls playsinline preload="metadata"></video><canvas id="pose-overlay" aria-hidden="true"></canvas><div class="pick-layer" id="pick-layer"></div><span class="video-label" id="video-label"></span><button class="video-fs" id="fullscreen" type="button" data-i18n-aria="app.fullscreen">${icon("expand", 18)}</button></div>
       <div class="player-footer"><span id="file-label"></span><label class="toggle"><input type="checkbox" id="show-skeleton" checked> <span data-i18n="app.skeleton"></span></label><label class="toggle"><input type="checkbox" id="show-angles" checked> <span data-i18n="app.angles"></span></label><button class="text-button" id="replace-file" data-i18n="app.replace"></button></div>
       <div class="player-tools"><div class="speed" role="group"><button data-speed="0.25">0.25×</button><button data-speed="0.5">0.5×</button><button data-speed="1" class="selected">1×</button></div><button class="icon-button" id="step-back" data-i18n-aria="app.stepBack">${icon("prev", 16)}</button><button class="icon-button" id="step-fwd" data-i18n-aria="app.stepFwd">${icon("next", 16)}</button><span class="mini muted" data-i18n="app.keysHint"></span></div>
       <p class="mini muted" id="playback-note"></p></div>
@@ -95,7 +96,7 @@ app.innerHTML = `
  </main>
 </div>
 <dialog id="info-dialog"><button class="dialog-close" id="close-info" data-i18n-aria="app.close">${icon("close")}</button><div id="info-content"></div></dialog>
-<dialog id="picker-dialog" class="wide"><div class="eyebrow" data-i18n="picker.eyebrow"></div><h2 data-i18n="picker.title"></h2><p class="muted" data-i18n="picker.text"></p><div class="picker-stage"><canvas id="picker-frame"></canvas><canvas id="picker-canvas"></canvas></div><div class="picker-bar"><button class="icon-button" id="picker-prev">${icon("prev", 16)}</button><span id="picker-time" class="mini"></span><button class="icon-button" id="picker-next">${icon("next", 16)}</button><span class="grow"></span><button class="text-button" id="picker-cancel" data-i18n="app.cancel"></button><button class="small-button" id="picker-confirm" data-i18n="picker.confirm"></button></div></dialog>
+<dialog id="picker-dialog" class="wide"><div class="eyebrow" data-i18n="picker.eyebrow"></div><h2 data-i18n="picker.title"></h2><p class="muted" id="picker-text"></p><div class="picker-stage"><canvas id="picker-frame"></canvas><canvas id="picker-canvas"></canvas></div><div class="picker-bar"><button class="icon-button" id="picker-prev">${icon("prev", 16)}</button><span id="picker-time" class="mini"></span><button class="icon-button" id="picker-next">${icon("next", 16)}</button><span class="grow"></span><button class="text-button" id="picker-cancel" data-i18n="app.cancel"></button><button class="small-button" id="picker-confirm" data-i18n="picker.confirm"></button></div></dialog>
 <div id="update-banner" class="update-banner" role="status" hidden></div>
 <div id="toast" class="toast" role="status" hidden></div>`;
 const player = $<HTMLVideoElement>("player"), overlay = $<HTMLCanvasElement>("pose-overlay");
@@ -173,12 +174,48 @@ function currentSample() {
  const best = lo > 0 && Math.abs(s[lo - 1].time - tm) < Math.abs(s[lo].time - tm) ? lo - 1 : lo;
  return s[best] && Math.abs(s[best].time - tm) < 1.5 / Math.max(5, report.fps) ? s[best] : undefined;
 }
-function stopOverlay() { cancelAnimationFrame(frameLoop); drawPose(overlay, player, undefined, { accent: profile.accent, threshold: .65 }); }
+function stopOverlay() { cancelAnimationFrame(frameLoop); drawPose(overlay, player, undefined, { accent: profile.accent, threshold: .65 }); pickLayer(undefined); }
+// On pause, the other people the model found in this frame are drawn faintly and can be clicked to analyse them instead.
+let choosable = false, pickKey = "";
+function pickLayer(sample: Report["samples"][number] | undefined) {
+ const layer = $("pick-layer"), vw = player.videoWidth, vh = player.videoHeight;
+ const show = !!report && choosable && player.paused && !!sample?.candidates && sample.candidates.length > 1 && !!vw && !!vh;
+ if (show) {
+  const ctx = overlay.getContext("2d"), box = videoBox(overlay, vw, vh);
+  if (ctx) sample!.candidates!.forEach(lms => { if (lms !== sample!.landmarks) drawLandmarks(ctx, lms, box, { accent: "#ffffff", threshold: .5, dim: true }, { w: sample!.width || vw, h: sample!.height || vh }); });
+ }
+ const key = show ? report!.id + ":" + sample!.time + ":" + overlay.clientWidth + "x" + overlay.clientHeight + ":" + report!.athlete.seed?.index + "/" + report!.athlete.seed?.candidate : "";
+ if (key === pickKey) return; pickKey = key; layer.innerHTML = "";
+ if (!show) return;
+ const s = sample!, box = videoBox(overlay, vw, vh), index = report!.samples.indexOf(s), current = currentCandidate(s);
+ s.candidates!.forEach((lms, k) => {
+  if (k === current) return;
+  const g = personGeometry(lms, s.width || vw, s.height || vh); if (!g) return;
+  const sx = box.w / (s.width || vw), sy = box.h / (s.height || vh), pad = 10;
+  const b = document.createElement("button"); b.type = "button"; b.className = "pick-person";
+  b.style.left = (box.ox + g.minX * sx - pad) + "px"; b.style.top = (box.oy + g.minY * sy - pad) + "px";
+  b.style.width = ((g.maxX - g.minX) * sx + 2 * pad) + "px"; b.style.height = ((g.maxY - g.minY) * sy + 2 * pad) + "px";
+  b.innerHTML = "<span>" + esc(t("player.pickThis")) + "</span>"; b.setAttribute("aria-label", t("player.pickThis"));
+  b.onclick = event => { event.stopPropagation(); chooseAthlete({ index, candidate: k }); };
+  layer.appendChild(b);
+ });
+}
+function chooseAthlete(seed: Seed) {
+ const r = report; if (!r) return;
+ report = makeReport({ ...r, seed, elapsedMs: r.elapsedMs }); renderCurrent(); toast(t("app.athleteChanged"));
+}
+async function choosePerson(auto: boolean) {
+ const r = report; if (!r || !file || !canChoose(r)) return;
+ const seed = await pickAthlete(r, player, profile.accent, auto);
+ if (seed && report === r) chooseAthlete(seed);
+}
 function startOverlay() {
  stopOverlay();
  const tick = () => {
   if (!report) return;
-  drawPose(overlay, player, $<HTMLInputElement>("show-skeleton").checked ? currentSample() : undefined, { accent: profile.accent, threshold: report.threshold, angles: $<HTMLInputElement>("show-angles").checked ? ANGLES[profile.id] : undefined });
+  const sample = currentSample();
+  drawPose(overlay, player, $<HTMLInputElement>("show-skeleton").checked ? sample : undefined, { accent: profile.accent, threshold: report.threshold, angles: $<HTMLInputElement>("show-angles").checked ? ANGLES[profile.id] : undefined });
+  pickLayer(sample);
   playhead?.(player.currentTime); frameLoop = requestAnimationFrame(tick);
  };
  tick();
@@ -211,6 +248,8 @@ async function runAnalysis(target: File, src: Report["source"]) {
    if (p.sample) { aspect.value = p.sample.width / Math.max(1, p.sample.height); $("progress-detail").textContent = t("progress.detail", { time: formatTime(p.sample.time), people: p.sample.people ?? 0 }); drawMini($<HTMLCanvasElement>("progress-mini"), p.sample.candidates?.[0], aspect.value, profile.accent); }
   } });
   report = makeReport({ ...base, ...data }); source = src; renderCurrent();
+  // Several people found: ask right away who the athlete is instead of hiding the choice in the report.
+  if (file && canChoose(report)) setTimeout(() => void choosePerson(true), 300);
  } catch (error) {
   if (error instanceof AnalysisAborted) {
    const partial = error.partial;
@@ -241,10 +280,10 @@ async function save() {
 function renderCurrent() {
  if (!report) return; const r = report;
  $("report-section").hidden = false; $("principles").hidden = true;
- const canPick = !!file && canChoose(r);
+ const canPick = !!file && canChoose(r); choosable = canPick; pickKey = "";
  const api = renderReport($("report-section"), r, {
   hasVideo: () => !!file, seek, save, json: exportJson, csv: exportCsv, attach: () => $<HTMLInputElement>("attach-input").click(),
-  pickAthlete: canPick ? async () => { const seed = await pickAthlete(r, player, profile.accent); if (seed) { report = makeReport({ ...r, seed, elapsedMs: r.elapsedMs }); renderCurrent(); toast(t("app.athleteChanged")); } } : null,
+  pickAthlete: canPick ? () => void choosePerson(false) : null,
   reanalyze: r.source === "live" && file ? () => void runAnalysis(file!, "camera") : null
  });
  playhead = api.playhead;
