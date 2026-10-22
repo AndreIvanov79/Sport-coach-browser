@@ -4,7 +4,7 @@ import { angle } from "../src/core/geometry.ts";
 import { buildBody, observed } from "../src/core/body.ts";
 import { metricsFor, seriesOf } from "../src/core/series.ts";
 import { detectCycles, inferInverted, pickDriver } from "../src/core/cycles.ts";
-import { trackAthlete } from "../src/core/track.ts";
+import { choosableAthlete, trackAthlete } from "../src/core/track.ts";
 import { lookDistance, sampleLooks } from "../src/core/appearance.ts";
 import { classifyView } from "../src/core/view.ts";
 import { makeReport, refreshReport } from "../src/core/report.ts";
@@ -77,4 +77,12 @@ test("a lone athlete is never dropped because the shirt looks different from the
  const front = { torso: [.9, .9, .9], legs: [.1, .1, .1] }, back = { torso: [.8, .1, .1], legs: [.1, .1, .1] };
  const s = samples(30, 15, () => pose()).map((x, i) => ({ ...x, looks: [i < 15 ? front : back] }));
  assert.equal(trackAthlete(s).athlete.lostFrames, 0);
+});
+test("a ghost second person in a couple of frames does not count as several people", () => {
+ const ghost = samples(100, 15, i => i === 40 || i === 41 ? [pose(), pose({ dx: .3, scale: .5 })] : [pose()]);
+ assert.equal(choosableAthlete(ghost), false);
+ const pair = samples(100, 15, i => i % 3 === 0 ? [pose({ dx: -.2, scale: .5 }), pose({ dx: .2, scale: .5 })] : [pose({ dx: -.2, scale: .5 })]);
+ assert.equal(choosableAthlete(pair), true);
+ const r = makeReport({ sport: "boxing", exercise: "auto", fileName: "g.mp4", samples: ghost, fps: 15, threshold: .65, elapsedMs: 1, duration: 100 / 15 });
+ assert.ok(!r.findings.some(f => f.code === "athlete_auto"));
 });

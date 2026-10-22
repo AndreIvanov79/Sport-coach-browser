@@ -2,8 +2,10 @@ import type { Report, Seed } from "../types.ts";
 import { t } from "../i18n/index.ts";
 import { $, formatTime } from "./dom.ts";
 import { drawCandidates, videoBox } from "./overlay.ts";
+import { choosableAthlete, multiPersonFrames } from "../core/track.ts";
 /** Frames with more than one detected person, where the athlete can be chosen. */
-export const multiFrames = (r: Report) => r.samples.map((s, i) => (s.candidates?.length ?? 0) > 1 ? i : -1).filter(i => i >= 0);
+export const multiFrames = (r: Report) => multiPersonFrames(r.samples);
+export const canChoose = (r: Report) => choosableAthlete(r.samples);
 export function pickAthlete(r: Report, player: HTMLVideoElement, accent: string): Promise<Seed | null> {
  const frames = multiFrames(r); if (!frames.length) return Promise.resolve(null);
  const dialog = $<HTMLDialogElement>("picker-dialog"), canvas = $<HTMLCanvasElement>("picker-canvas"), image = $<HTMLCanvasElement>("picker-frame");

@@ -36,6 +36,11 @@ function autoSeed(samples: Sample[]): Seed | null {
  }
  return null;
 }
+/** Frames where the model reported more than one person. */
+export const multiPersonFrames = (samples: Sample[]): number[] => samples.map((s, i) => (s.candidates?.length ?? 0) > 1 ? i : -1).filter(i => i >= 0);
+/** MediaPipe sometimes reports a ghost second person for a frame or two (a bag, a reflection); a choice is only
+ * meaningful when several people were seen in at least 3 frames and 2% of the clip. */
+export const choosableAthlete = (samples: Sample[]): boolean => multiPersonFrames(samples).length >= Math.max(3, Math.ceil(.02 * samples.length));
 export function trackAthlete(input: Sample[], seed?: Seed): { samples: Sample[]; athlete: Athlete } {
  const people = Math.max(0, ...input.map(s => s.candidates?.length ?? (s.landmarks.length ? 1 : 0)));
  const hasCandidates = input.some(s => s.candidates);

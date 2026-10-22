@@ -4,7 +4,7 @@ import { bodyCoverage, buildBody, reliability } from "./body.ts";
 import { metricsFor } from "./series.ts";
 import { activitySegments } from "./segments.ts";
 import { classifyView } from "./view.ts";
-import { trackAthlete } from "./track.ts";
+import { choosableAthlete, trackAthlete } from "./track.ts";
 import type { SportContext, SportResult } from "./findings.ts";
 import { analyzeFitness } from "../sports/fitness.ts";
 import { analyzeBoxing } from "../sports/boxing.ts";
@@ -28,7 +28,8 @@ export function makeReport(input: ReportInput): Report {
  if (input.interrupted) findings.push({ code: "interrupted", tone: "attention", kind: "quality", params: { seconds: Math.round((input.processedDuration ?? samples[samples.length - 1]?.time ?? 0) * 10) / 10, total: Math.round(duration * 10) / 10 } });
  if (coverage < .6) findings.push({ code: "low_coverage", tone: "attention", kind: "quality", params: { pct: Math.round(coverage * 100) } });
  else findings.push({ code: "coverage_ok", tone: "good", kind: "quality", params: { pct: Math.round(coverage * 100) } });
- if (athlete.people > 1) findings.push({ code: athlete.selection === "user" ? "athlete_user" : "athlete_auto", tone: "info", kind: "quality", time: athlete.seedTime, params: { people: athlete.people, lost: athlete.lostFrames } });
+ const severalPeople = athlete.people > 1 && (!samples.some(s => s.candidates) || choosableAthlete(samples) || athlete.selection === "user");
+ if (severalPeople) findings.push({ code: athlete.selection === "user" ? "athlete_user" : "athlete_auto", tone: "info", kind: "quality", time: athlete.seedTime, params: { people: athlete.people, lost: athlete.lostFrames } });
  if (body.bridged) findings.push({ code: "bridged", tone: "info", kind: "quality", params: { count: body.bridged } });
  if (rel.frames && rel.suspectShare > .15) findings.push({ code: "suspect_geometry", tone: "attention", kind: "quality", params: { pct: Math.round(rel.suspectShare * 100) } });
  const weak = metrics.filter(m => m.coverage < .6 && profile.tableMetrics.includes(m.id));

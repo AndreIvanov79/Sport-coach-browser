@@ -1,5 +1,6 @@
 // Browser QA: real MediaPipe in Chromium against the built PWAs.
-// Usage: node scripts/e2e.mjs [--chrome /path/to/chrome] [--fixtures dir] [--out artifacts/e2e]
+// Usage: node scripts/e2e.mjs [--chrome /path/to/chrome] [--fixtures dir] [--out artifacts/e2e] [--dump] [--skip-update]
+// cases.json: [{ name, sport, file, exercise?, fps?, lang?, model? }]
 // Chromium builds without proprietary codecs need VP8/VP9 WebM fixtures (ffmpeg -c:v libvpx-vp9).
 import http from "node:http";
 import fs from "node:fs/promises";
@@ -30,10 +31,11 @@ for (const c of cases) {
  if (c.lang) await page.selectOption("#lang", c.lang);
  await page.setInputFiles("#file-input", path.join(fixtures, c.file));
  await page.selectOption("#exercise", c.exercise ?? "auto"); await page.selectOption("#fps", String(c.fps ?? 15));
+ if (c.model) await page.selectOption("#model", c.model);
  const started = Date.now();
  await page.click("#analyze");
  await page.waitForFunction(() => !window.__sportCoach.busy() && (window.__sportCoach.report() || !document.getElementById("error").hidden), null, { timeout: 600000 });
- const r = await page.evaluate(() => { const x = window.__sportCoach.report(); if (!x) return { error: document.getElementById("error").textContent }; return { samples: x.samples.length, duration: x.duration, decode: x.decode, coverage: x.coverage, people: x.athlete.people, selection: x.athlete.selection, lost: x.athlete.lostFrames, view: x.view.kind, driver: x.driver, cycles: x.cycles.length, findings: x.findings.map(f => f.code + (f.focus ? "*" : "")), scalars: Object.fromEntries(x.scalars.filter(s => s.value !== null).map(s => [s.id, Math.round(s.value * 100) / 100])), exercise: x.exerciseInfo ? { detected: x.exerciseInfo.detected, status: x.exerciseInfo.status, candidates: x.exerciseInfo.candidates } : null, strikes: x.strikes?.length ?? null, events: x.rg ? x.rg.events.map(e => e.action + ":" + e.element + "@" + e.peak.toFixed(1) + (e.turns ? "x" + e.turns : "") + (e.hold !== null ? " hold " + e.hold.toFixed(2) : "")) : null, score: x.rg ? { d: x.rg.score.d.value, e: x.rg.score.e.total, review: x.rg.score.e.review, mode: x.rg.score.mode } : null }; });
+ const r = await page.evaluate(() => { const x = window.__sportCoach.report(); if (!x) return { error: document.getElementById("error").textContent }; return { samples: x.samples.length, duration: x.duration, decode: x.decode, coverage: x.coverage, people: x.athlete.people, selection: x.athlete.selection, lost: x.athlete.lostFrames, view: x.view.kind, driver: x.driver, cycles: x.cycles.length, findings: x.findings.map(f => f.code + (f.focus ? "*" : "")), model: document.getElementById("model")?.value, pickButton: !!document.getElementById("pick-athlete"), scalars: Object.fromEntries(x.scalars.filter(s => s.value !== null).map(s => [s.id, Math.round(s.value * 100) / 100])), exercise: x.exerciseInfo ? { detected: x.exerciseInfo.detected, status: x.exerciseInfo.status, candidates: x.exerciseInfo.candidates } : null, strikes: x.strikes?.length ?? null, events: x.rg ? x.rg.events.map(e => e.action + ":" + e.element + "@" + e.peak.toFixed(1) + (e.turns ? "x" + e.turns : "") + (e.hold !== null ? " hold " + e.hold.toFixed(2) : "")) : null, score: x.rg ? { d: x.rg.score.d.value, e: x.rg.score.e.total, review: x.rg.score.e.review, mode: x.rg.score.mode } : null }; });
  if (process.argv.includes("--dump")) await fs.writeFile(path.join(out, c.name + ".report.json"), await page.evaluate(() => JSON.stringify(window.__sportCoach.report())));
  const text = await page.locator("#report-section").innerText().catch(() => "");
  const rawKeys = [...text.matchAll(/\b(?:f|s|sd|m|md|rg\.el|ex|exn|app|report|sum)\.[a-z][\w.]*\b/g)].map(m => m[0]).filter(k => !/\.(mp4|webm|json|csv)$/.test(k));

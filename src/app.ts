@@ -11,7 +11,7 @@ import { drawMini, drawPose } from "./ui/overlay.ts";
 import { renderReport } from "./ui/report-view.ts";
 import { renderHistory } from "./ui/history-view.ts";
 import { LiveSession } from "./ui/live.ts";
-import { multiFrames, pickAthlete } from "./ui/picker.ts";
+import { canChoose, pickAthlete } from "./ui/picker.ts";
 import { idle, refreshPwaTexts, setupPwa } from "./ui/pwa.ts";
 import { bindFullscreen } from "./ui/fullscreen.ts";
 import { watchFrozenFrames } from "./ui/stall.ts";
@@ -19,11 +19,13 @@ const profile = profiles[__SPORT__], app = document.querySelector<HTMLDivElement
 const extension = location.protocol.endsWith("-extension:");
 const models = availableModels();
 const SETTINGS = "sport-coach-" + profile.id + "-settings";
-type Settings = { exercise: string; fps: number; threshold: number; model: ModelId; countdown: number; voice: boolean; record: boolean };
-const defaults: Settings = { exercise: "auto", fps: profile.defaultFps, threshold: 65, model: "lite", countdown: 5, voice: true, record: true };
+type Settings = { exercise: string; fps: number; threshold: number; model: ModelId; countdown: number; voice: boolean; record: boolean; v?: number };
+// Full by default: on real clips it gives several times fewer skeleton glitches (left/right swaps, limbs jumping) than Lite.
+const defaultModel: ModelId = models.some(m => m.id === "full") ? "full" : "lite";
+const defaults: Settings = { exercise: "auto", fps: profile.defaultFps, threshold: 65, model: defaultModel, countdown: 5, voice: true, record: true, v: 2 };
 let settings: Settings = defaults;
-try { settings = { ...defaults, ...JSON.parse(localStorage.getItem(SETTINGS) ?? "{}") }; } catch { /* defaults */ }
-if (!models.some(m => m.id === settings.model)) settings.model = "lite";
+try { const saved = JSON.parse(localStorage.getItem(SETTINGS) ?? "{}"); settings = { ...defaults, ...saved }; if (saved.v !== 2) { settings.model = defaultModel; settings.v = 2; } } catch { /* defaults */ }
+if (!models.some(m => m.id === settings.model)) settings.model = defaultModel;
 const saveSettings = () => { try { localStorage.setItem(SETTINGS, JSON.stringify(settings)); } catch { /* ignore */ } };
 let file: File | null = null, objectUrl: string | null = null, report: Report | null = null, controller: AbortController | null = null;
 let durationOverride: number | undefined, frameLoop = 0, live: LiveSession | null = null, playhead: ((time: number) => void) | null = null;
@@ -155,9 +157,18 @@ $("fps").onchange = () => { settings.fps = Number($<HTMLSelectElement>("fps").va
 $("model").onchange = () => { settings.model = $<HTMLSelectElement>("model").value as ModelId; saveSettings(); modelHint(); };
 $("lang").onchange = () => { setLang($<HTMLSelectElement>("lang").value as Lang); applyI18n(); renderCurrent(); if (view === "history") void showHistory(); };
 // Player: overlay, angle labels, slow motion, frame stepping, chart playhead.
+// The skeleton follows the frame actually on screen (requestVideoFrameCallback), not currentTime: the clock runs
+// a frame or two apart from the picture, which made fast punches and kicks look as if the skeleton jumped.
+let shownTime: number | null = null;
+type FrameVideo = HTMLVideoElement & { requestVideoFrameCallback?: (cb: (now: number, meta: { mediaTime: number }) => void) => number };
+if ((player as FrameVideo).requestVideoFrameCallback) {
+ const onFrame = (_now: number, meta: { mediaTime: number }) => { shownTime = meta.mediaTime; (player as FrameVideo).requestVideoFrameCallback!(onFrame); };
+ (player as FrameVideo).requestVideoFrameCallback!(onFrame);
+ player.addEventListener("loadstart", () => { shownTime = null; });
+}
 function currentSample() {
  if (!report) return undefined;
- const tm = player.currentTime, s = report.samples; let lo = 0, hi = s.length - 1;
+ const tm = shownTime ?? player.currentTime, s = report.samples; let lo = 0, hi = s.length - 1;
  while (lo < hi) { const m = (lo + hi) >> 1; if (s[m].time < tm) lo = m + 1; else hi = m; }
  const best = lo > 0 && Math.abs(s[lo - 1].time - tm) < Math.abs(s[lo].time - tm) ? lo - 1 : lo;
  return s[best] && Math.abs(s[best].time - tm) < 1.5 / Math.max(5, report.fps) ? s[best] : undefined;
@@ -230,7 +241,7 @@ async function save() {
 function renderCurrent() {
  if (!report) return; const r = report;
  $("report-section").hidden = false; $("principles").hidden = true;
- const canPick = !!file && multiFrames(r).length > 0;
+ const canPick = !!file && canChoose(r);
  const api = renderReport($("report-section"), r, {
   hasVideo: () => !!file, seek, save, json: exportJson, csv: exportCsv, attach: () => $<HTMLInputElement>("attach-input").click(),
   pickAthlete: canPick ? async () => { const seed = await pickAthlete(r, player, profile.accent); if (seed) { report = makeReport({ ...r, seed, elapsedMs: r.elapsedMs }); renderCurrent(); toast(t("app.athleteChanged")); } } : null,
