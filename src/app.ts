@@ -1,7 +1,7 @@
 import "./style.css";
 import type { Lang, ModelId, Report, Seed } from "./types.ts";
 import { profiles } from "./profiles.ts";
-import { AnalysisAborted, analyzeVideo } from "./analyzer.ts";
+import { AnalysisAborted, analyzeVideo, mediaError } from "./analyzer.ts";
 import { EngineError, availableModels } from "./engine.ts";
 import { makeReport } from "./core/report.ts";
 import { persistStorage, saveReport } from "./storage.ts";
@@ -124,8 +124,11 @@ function movementHint() {
 }
 function modelHint() { const m = models.find(x => x.id === $<HTMLSelectElement>("model").value) ?? models[0]; $("model-help").textContent = t("modelHelp." + m.id, { mb: (m.bytes / 1048576).toFixed(1) }); }
 function fail(error: unknown) {
- const code = error instanceof EngineError ? error.code : null;
- $("error").textContent = code ? t("err." + code) : error instanceof Error ? error.message : String(error); $("error").hidden = false;
+ const code = error instanceof EngineError ? error.code : null, el = $("error");
+ el.textContent = code ? t("err." + code) : error instanceof Error ? error.message : String(error);
+ // The browser's own reason (e.g. "MediaError 3: …") in small print: it tells a decoder problem from a format problem.
+ if (code && error instanceof Error && error.message && error.message !== code) { const detail = document.createElement("small"); detail.className = "error-detail"; detail.textContent = error.message.slice(0, 200); el.append(detail); }
+ el.hidden = false;
 }
 function updateControls() {
  const busy = !!controller;
@@ -137,13 +140,46 @@ function setFile(next: File, recordedDuration?: number, keepReport = false) {
  if (!next.type.startsWith("video/") && !/\.(mp4|webm|mov|m4v)$/i.test(next.name)) { fail(new Error(t("err.notVideo"))); return; }
  if (next.size > 1024 * 1024 * 1024) { fail(new Error(t("err.tooBig"))); return; }
  stopOverlay(); if (objectUrl) URL.revokeObjectURL(objectUrl);
- file = next; durationOverride = recordedDuration; objectUrl = URL.createObjectURL(next);
+ file = next; durationOverride = recordedDuration; objectUrl = URL.createObjectURL(next); playerRetries = 0; player.removeAttribute("poster");
  if (!keepReport) { report = null; $("report-section").hidden = true; $("principles").hidden = false; source = "file"; }
  player.src = objectUrl; player.load(); $("dropzone").hidden = true; $("player-section").hidden = false; $("error").hidden = true;
  $("file-label").textContent = next.name; $("source-meta").textContent = (next.size / 1048576).toFixed(1) + " MB";
  applyI18n(); updateControls(); if (keepReport && report) { startOverlay(); renderCurrent(); }
 }
-player.addEventListener("error", () => { if (player.getAttribute("src")) fail(new Error(t("err.decode"))); });
+// A phone can refuse a decoder for a moment (another video, the camera or the GPU still holds one): retry twice quietly.
+let playerRetries = 0;
+player.addEventListener("error", () => {
+ const src = player.getAttribute("src"); if (!src) return;
+ if (playerRetries < 2) {
+  playerRetries++; const at = player.currentTime;
+  console.warn("[sport-coach] player could not decode (" + mediaError(player).message + "), retry " + playerRetries);
+  setTimeout(() => { if (player.getAttribute("src") !== src) return; player.addEventListener("loadedmetadata", () => { if (at > 0) player.currentTime = at; }, { once: true }); player.load(); }, 600 * playerRetries);
+  return;
+ }
+ fail(mediaError(player));
+});
+player.addEventListener("loadeddata", () => { playerRetries = 0; });
+/** Frees the player's decoder for the analysis (phones have few) and shows its last frame meanwhile; the returned
+ *  function brings the video back at the same position. */
+function suspendPlayer(): () => Promise<void> {
+ const src = player.getAttribute("src"), at = player.currentTime;
+ if (!src) return async () => undefined;
+ try {
+  const c = document.createElement("canvas"), scale = Math.min(1, 960 / Math.max(player.videoWidth, player.videoHeight, 1));
+  c.width = Math.round(player.videoWidth * scale); c.height = Math.round(player.videoHeight * scale);
+  if (c.width && c.height && player.readyState >= 2) { c.getContext("2d")?.drawImage(player, 0, 0, c.width, c.height); player.poster = c.toDataURL("image/jpeg", .85); }
+ } catch { /* no snapshot: the player is simply empty during the analysis */ }
+ player.removeAttribute("src"); player.load();
+ let done = false;
+ return async () => {
+  if (done) return; done = true;
+  if (objectUrl !== src || player.getAttribute("src")) return; // another file was chosen meanwhile
+  const ready = new Promise<void>(resolve => { const end = () => resolve(); player.addEventListener("loadeddata", end, { once: true }); player.addEventListener("error", end, { once: true }); setTimeout(end, 5000); });
+  player.src = src; player.load(); await ready;
+  if (at > 0) player.currentTime = at;
+  player.removeAttribute("poster");
+ };
+}
 watchFrozenFrames(player);
 const choose = () => { if (!controller) $<HTMLInputElement>("file-input").click(); };
 $("source-file").onclick = choose; $("dropzone").onclick = choose; $("replace-file").onclick = choose;
@@ -241,12 +277,13 @@ async function runAnalysis(target: File, src: Report["source"]) {
  controller = new AbortController(); updateControls(); $("progress-section").hidden = false; $("progress-section").scrollIntoView({ behavior: "smooth", block: "nearest" });
  const fps = settings.fps, threshold = settings.threshold / 100, exercise = settings.exercise, model = models.find(m => m.id === settings.model) ?? models[0];
  const base = { sport: profile.id, exercise, fileName: target.name, fps, threshold, modelId: model.id, source: src, fileSize: target.size, fileModified: target.lastModified };
- const aspect = { value: 1 };
+ const aspect = { value: 1 }, resume = suspendPlayer();
  try {
   const data = await analyzeVideo(target, { fps, model, signal: controller.signal, durationOverride, progress: p => {
    $("progress-title").textContent = t(PHASES[p.phase]); $<HTMLProgressElement>("progress").value = p.fraction; $("progress-percent").textContent = Math.round(p.fraction * 100) + "%";
    if (p.sample) { aspect.value = p.sample.width / Math.max(1, p.sample.height); $("progress-detail").textContent = t("progress.detail", { time: formatTime(p.sample.time), people: p.sample.people ?? 0 }); drawMini($<HTMLCanvasElement>("progress-mini"), p.sample.candidates?.[0], aspect.value, profile.accent); }
   } });
+  await resume();
   report = makeReport({ ...base, ...data }); source = src; renderCurrent();
   // Several people found: ask right away who the athlete is instead of hiding the choice in the report.
   if (file && canChoose(report)) setTimeout(() => void choosePerson(true), 300);
@@ -256,7 +293,7 @@ async function runAnalysis(target: File, src: Report["source"]) {
    if (partial && partial.samples.length >= 10) { report = makeReport({ ...base, ...partial, interrupted: true }); renderCurrent(); toast(t("app.partialReport")); }
    else toast(t("app.cancelled"));
   } else fail(error);
- } finally { controller = null; $("progress-section").hidden = true; updateControls(); idle(); }
+ } finally { controller = null; $("progress-section").hidden = true; updateControls(); idle(); void resume(); }
 }
 $("analyze").onclick = () => { if (file) void runAnalysis(file, source === "live" ? "camera" : source); };
 $("cancel").onclick = () => controller?.abort();

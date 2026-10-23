@@ -58,3 +58,4 @@ dialog.wide{width:min(980px,calc(100vw - 24px))}.picker-stage{position:relative;
 option,optgroup{background-color:#141b19;color:#e9eeeb}
 @media(max-width:650px){.nav-item{padding:9px}}
 .pick-layer{position:absolute;inset:0;pointer-events:none}.pick-person{position:absolute;pointer-events:auto;border:3px dashed var(--c,#fff);box-shadow:0 0 0 1px #000a;border-radius:10px;background:transparent;cursor:pointer;padding:0}.pick-person:hover,.pick-person:focus-visible{border-style:solid;background:#ffffff1a}.pick-person span{position:absolute;left:6px;top:6px;max-width:calc(100% - 12px);font-size:10px;font-weight:700;line-height:1.3;text-align:left;color:#000;background:var(--c,#fff);border-radius:4px;padding:3px 6px}
+#error .error-detail{display:block;margin-top:6px;font-size:10px;opacity:.75;word-break:break-word}
