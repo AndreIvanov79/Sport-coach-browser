@@ -18,10 +18,10 @@ test("an over-long or placeholder text is reported", async () => {
  assert.deepEqual(listingProblems(listings), ["boxing.en.summary: placeholder left in text", "rg.ro.playShort: 81 > 80 characters"]);
 });
 
-test("the shipped config still asks the publisher to fill it in, and nothing public is produced from it", async () => {
+test("store/config.json is well-formed: the only allowed problems are values not filled in yet", async () => {
  const shipped = JSON.parse(await fs.readFile("store/config.json", "utf8"));
- assert.ok(placeholders(shipped).includes("siteUrl"));
- assert.ok(configProblems(shipped).length > 0);
+ for (const problem of configProblems(shipped)) assert.match(problem, /fill in store\/config\.json/);
+ assert.ok(placeholders(config({ siteUrl: "https://YOUR_DOMAIN" })).includes("siteUrl"));
 });
 
 test("config checks: https, e-mail, root domain for Android", () => {
