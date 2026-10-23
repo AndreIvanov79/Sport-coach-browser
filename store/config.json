@@ -1,8 +1,8 @@
 {
   "_comment": "Fill these in before publishing (see store/README.md). npm run site and npm run twa refuse to produce public files while a value still starts with YOUR_.",
-  "siteUrl": "https://YOUR_DOMAIN",
-  "contactEmail": "YOUR_EMAIL",
-  "developerName": "YOUR_NAME",
+  "siteUrl": "https://andreivanov79.github.io/Sport-coach-browser",
+  "contactEmail": "andrei.ivanov26@yahoo.com",
+  "developerName": "Andrei Ivanov",
   "policyDate": "2026-10-22",
   "androidPackagePrefix": "YOUR_REVERSED_DOMAIN.sportcoach",
   "playSigningSha256": {
