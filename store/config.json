@@ -3,7 +3,7 @@
   "siteUrl": "https://andreivanov79.github.io/Sport-coach-browser",
   "contactEmail": "andrei.ivanov26@yahoo.com",
   "developerName": "Andrei Ivanov",
-  "policyDate": "2026-10-22",
+  "policyDate": "2026-11-09",
   "androidPackagePrefix": "YOUR_REVERSED_DOMAIN.sportcoach",
   "playSigningSha256": {
     "_comment": "Play Console → Test and release → App integrity → App signing: copy the SHA-256 of the app signing key (and of the upload key) for each app.",
