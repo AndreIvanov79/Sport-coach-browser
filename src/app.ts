@@ -16,6 +16,9 @@ import { personGeometry } from "./core/track.ts";
 import { idle, refreshPwaTexts, setupPwa } from "./ui/pwa.ts";
 import { bindFullscreen } from "./ui/fullscreen.ts";
 import { watchFrozenFrames } from "./ui/stall.ts";
+import { endCoachMode, readCoachContext } from "./handoff/coach.ts";
+import { renderCoachBanner, renderCoachPanel } from "./handoff/coach-view.ts";
+import { openShareDialog } from "./ui/share-card.ts";
 const profile = profiles[__SPORT__], app = document.querySelector<HTMLDivElement>("#app")!;
 const extension = location.protocol.endsWith("-extension:");
 const models = availableModels();
@@ -49,6 +52,7 @@ app.innerHTML = `
  <header class="topbar"><div class="breadcrumb"><span data-i18n="sport.${profile.id}.name"></span> <span>/</span> <b id="page-label"></b></div><div class="top-actions"><label class="lang">${icon("globe", 15)}<select id="lang" aria-label="Language">${LANGS.map(l => "<option value=\"" + l + "\"" + (l === getLang() ? " selected" : "") + ">" + LANG_NAMES[l] + "</option>").join("")}</select></label><button class="small-button" id="install" hidden>${icon("download", 16)} <span data-i18n="app.install"></span></button><span class="status-pill" id="offline-status"></span></div></header>
  <main>
   <div id="analysis-view">
+   <div id="coach-host" hidden></div>
    <section class="hero"><div><div class="eyebrow"><span></span><b data-i18n="sport.${profile.id}.tag"></b></div><h1 data-i18n="sport.${profile.id}.title"></h1><p data-i18n="sport.${profile.id}.subtitle"></p></div><div class="hero-stamp"><span>ON DEVICE</span>${icon("shield", 38)}<span>BY DESIGN</span></div></section>
    <div class="studio-grid">
     <section class="panel source-panel">
@@ -100,6 +104,14 @@ app.innerHTML = `
 <div id="update-banner" class="update-banner" role="status" hidden></div>
 <div id="toast" class="toast" role="status" hidden></div>`;
 const player = $<HTMLVideoElement>("player"), overlay = $<HTMLCanvasElement>("pose-overlay");
+// Coach mode: opened from the Coach Desk Lite Mini App with #coach=1&a=…&n=…&ret=… (coach-lite SPEC, 6.1).
+// The fragment is dropped from the address bar so the athlete's name does not stay in bookmarks; the tab keeps it.
+let coach = readCoachContext(location.hash);
+if (location.hash.startsWith("#coach=")) history.replaceState(null, "", location.pathname + location.search);
+function showCoach() {
+ if (!coach) { $("coach-host").hidden = true; return; }
+ renderCoachBanner($("coach-host"), coach, () => { endCoachMode(); coach = null; showCoach(); $("report-section").querySelector(".coach-panel")?.remove(); toast(t("coach.exited")); });
+}
 const fullscreen = bindFullscreen($("video-wrap"), player, $<HTMLButtonElement>("fullscreen"));
 function applyI18n() {
  document.querySelectorAll<HTMLElement>("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n!); });
@@ -112,7 +124,7 @@ function applyI18n() {
  $("live-countdown").innerHTML = [0, 3, 5, 10].map(v => opt(v, "countdown." + v, settings.countdown)).join("");
  $<HTMLInputElement>("threshold").value = String(settings.threshold); $("threshold-value").textContent = settings.threshold + "%";
  $<HTMLInputElement>("live-voice").checked = settings.voice; $<HTMLInputElement>("live-record").checked = settings.record;
- $("page-label").textContent = t("nav." + view); movementHint(); modelHint();
+ $("page-label").textContent = t("nav." + view); movementHint(); modelHint(); showCoach();
  if (!file) $("source-meta").textContent = t("app.upTo10");
  $("video-label").textContent = t(report && file ? "app.labelSkeleton" : "app.labelSource");
  $("playback-note").textContent = t(report && file ? "app.noteSkeleton" : "app.noteSource");
@@ -306,12 +318,12 @@ function exportCsv() {
  r.samples.forEach((s, i) => rows.push(s.time.toFixed(4) + "," + r.metrics.map(m => m.series[i]?.toFixed(4) ?? "").join(",")));
  download(new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8" }), profile.id + "-metrics-" + r.id.slice(0, 8) + ".csv");
 }
-async function save() {
+async function save(quiet = false) {
  if (!report) return;
  try {
   await saveReport({ ...report, samples: report.samples.map(({ candidates, looks, ...s }) => s) });
   const persisted = await persistStorage();
-  toast(t(persisted ? "app.savedPersistent" : "app.savedLocal"));
+  if (!quiet) toast(t(persisted ? "app.savedPersistent" : "app.savedLocal"));
  } catch (error) { fail(new Error(t("err.save"))); throw error; }
 }
 function renderCurrent() {
@@ -324,6 +336,7 @@ function renderCurrent() {
   reanalyze: r.source === "live" && file ? () => void runAnalysis(file!, "camera") : null
  });
  playhead = api.playhead;
+ if (coach) void renderCoachPanel($("report-section"), r, coach, { save: () => save(true), share: () => openShareDialog(r, file ? player : null) });
  if (file) { $("video-label").textContent = t("app.labelSkeleton"); $("playback-note").textContent = t("app.noteSkeleton"); startOverlay(); }
 }
 $<HTMLInputElement>("attach-input").onchange = async event => {
@@ -382,7 +395,7 @@ $("privacy-info").onclick = async () => {
  let storage = t("privacy.noEstimate"), persisted = "";
  try { const e = await navigator.storage?.estimate(); if (e) storage = t("privacy.estimate", { used: ((e.usage ?? 0) / 1048576).toFixed(1), quota: ((e.quota ?? 0) / 1073741824).toFixed(1) }); } catch { /* ignore */ }
  try { persisted = (await navigator.storage?.persisted?.()) ? t("privacy.persisted") : t("privacy.notPersisted"); } catch { /* ignore */ }
- openInfo("<div class=\"eyebrow\">" + t("privacy.eyebrow") + "</div><h2>" + t("privacy.title") + "</h2>" + [1, 2, 3, 4].map(i => "<p>" + t("privacy.p" + i) + "</p>").join("") + "<p>" + esc(storage) + " " + esc(persisted) + "</p>");
+ openInfo("<div class=\"eyebrow\">" + t("privacy.eyebrow") + "</div><h2>" + t("privacy.title") + "</h2>" + [1, 2, 3, 4, 5].map(i => "<p>" + t("privacy.p" + i) + "</p>").join("") + "<p>" + esc(storage) + " " + esc(persisted) + "</p>");
 };
 window.addEventListener("pagehide", () => { controller?.abort(); live?.close(); if (objectUrl) URL.revokeObjectURL(objectUrl); });
 setupPwa(extension, () => !!controller || !!live);

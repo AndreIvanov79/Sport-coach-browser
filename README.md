@@ -64,7 +64,23 @@ npm test             # ядро, виды спорта, интерфейс, сл
 npm run e2e -- --fixtures work/fixtures   # браузерный прогон на реальных роликах (Playwright)
 ```
 
+Режим тренера в браузере: `node scripts/qa-coach.mjs --boxing <ролик> --rg <ролик>` (Telegram не вызывается, скриншоты и карточки — `artifacts/coach/`).
+
 E2E берёт `work/fixtures/cases.json` и ролики VP9/WebM (Chromium без проприетарных кодеков не декодирует H.264). Результаты и скриншоты — `artifacts/e2e/`. Подробности и последние результаты — `docs/verification.md`. CI: `.github/workflows/ci.yml`.
+
+## Режим тренера (Coach Desk Lite)
+
+Если анализатор открыт из Mini App [Coach Desk Lite](https://t.me/coach_desk_lite_bot) ссылкой
+`…/<sport>/#coach=1&a=<ученик>&n=<имя>&ret=coach_desk_lite_bot`, сверху появляется плашка «Разбор для: <имя>»,
+а после анализа — «Сохранить в карточку» и «Поделиться отчётом». Кнопка открывает Telegram со сводкой разбора
+(≤ 512 символов в `startapp`: числа и коды выводов, без видео, имён и точек тела); на компьютере — две кнопки:
+Telegram Desktop или веб-Telegram. Полный отчёт сохраняется в историю под тем же id. «Поделиться отчётом» — картинка
+PNG 1080×1350 (кадр со скелетом, видео по умолчанию размыто, показатели, выводы) через системное «Поделиться» или
+скачивание. Чужой `ret` режим не включает (`src/handoff/targets.ts`). Без фрагмента анализатор работает как раньше.
+
+`src/handoff/summary.ts` и `handoff.ts` — копии из `coach-lite/shared/`, менять их только там и копировать сюда
+(тест сверяет копии, если `coach-lite` лежит в `../python_projects/coach-lite` или задан `COACH_LITE_DIR`).
+Формат и решения — `coach-lite/SPEC.md`, разделы 6–7.
 
 ## Границы анализа
 
@@ -81,6 +97,7 @@ E2E берёт `work/fixtures/cases.json` и ролики VP9/WebM (Chromium б�
 - `src/core/` — трек спортсмена, тело и мосты пропусков, серии, циклы, сегменты, ракурс, отбор выводов, сборка отчёта.
 - `src/sports/` — фитнес (+ каталог упражнений), бокс, ХГ (+ каталог FIG из qwen36).
 - `src/engine.ts`, `src/pose-worker.ts`, `src/analyzer.ts` — MediaPipe и декодирование.
-- `src/ui/` — отчёт, история, live, выбор спортсмена, PWA, оверлей, графики. `src/i18n/` — ru/en/ro.
+- `src/ui/` — отчёт, история, live, выбор спортсмена, PWA, оверлей, графики, карточка «Поделиться». `src/i18n/` — ru/en/ro.
+- `src/handoff/` — режим тренера: фрагмент ссылки, разрешённые боты, сводка и обратные ссылки в Telegram.
 - `scripts/build.mjs` — модели, проверки, 9 сборок; `scripts/e2e.mjs` — браузерный QA; `scripts/qa-firefox.mjs` — расширение Firefox.
 - `store/`, `site/`, `scripts/{site,store,store-assets,twa}.mjs` — публикация (`store/github-pages.yml` — workflow для GitHub Pages).

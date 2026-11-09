@@ -223,5 +223,17 @@ export const en: Record<string, string> = {
 "privacy.persisted": "Persistent storage granted.", "privacy.notPersisted": "The browser may clear history when space runs low — export what matters.",
 "pwa.preparing": "Preparing offline mode", "pwa.ready": "Ready offline", "pwa.extension": "Local extension", "pwa.noCache": "Offline cache unavailable",
 "pwa.notReadyOffline": "The app has not confirmed offline readiness yet. The model may be unavailable.", "pwa.update": "A new version of the app is available.", "pwa.updateApply": "Update",
-"pwa.updateLater": "Later", "pwa.updateAfter": "The update will apply after the analysis finishes."
+"pwa.updateLater": "Later", "pwa.updateAfter": "The update will apply after the analysis finishes.",
+"coach.for": "Analysis for: {name}", "coach.forAthlete": "Analysis for an athlete", "coach.forSelf": "Analysis for “My progress”",
+"coach.hint": "Choose a video and run the analysis. Then “Save to card” brings the result back to Coach Desk Lite in Telegram.", "coach.exit": "Normal mode", "coach.exited": "Coach mode is off: the analyzer works as usual.",
+"coach.panelText": "Coach Desk Lite opens in Telegram with this analysis. Only the figures and main findings are passed on. The full report is saved in this device's history.", "coach.desktopHint": "“Open in Telegram” if Telegram Desktop is installed; “web Telegram” works in the browser without installing anything.", "coach.save": "Save to card",
+"coach.openApp": "Open in Telegram", "coach.openWeb": "Open in web Telegram", "coach.what": "What is passed on",
+"coach.figures": "Figures: {list}.", "coach.findings": "Findings: {list}.", "coach.none": "none",
+"coach.trimmed": "Did not fit into the Telegram link: {list}.", "coach.notSent": "Not passed on: the video, file name, athlete's name, frames and body points.", "coach.opened": "Opening Telegram. If it asks, confirm launching Coach Desk Lite.",
+"coach.error": "Could not prepare the summary: {reason}", "share.button": "Share report", "share.eyebrow": "REPORT CARD",
+"share.title": "Share report", "share.text": "The picture is made on this device: a frame with the skeleton, the key figures and findings. Send it to the athlete in a chat or save it.", "share.making": "Preparing…",
+"share.blur": "Blur the video (the skeleton stays sharp)", "share.noVideo": "No video attached: the picture shows the skeleton only.", "share.share": "Share",
+"share.download": "Download PNG", "share.unsupported": "Files cannot be shared directly here: download the picture and send it from your gallery or downloads.", "share.downloaded": "The picture is saved to downloads.",
+"share.failed": "Could not make the picture.", "card.title": "Technique analysis", "card.coverage": "pose in {pct}% of frames",
+"card.footer": "Analysed on the device. The video was not uploaded anywhere.", "privacy.p5": "Coach mode turns on only when the analyzer is opened from Coach Desk Lite in Telegram. “Save to card” gives Telegram a link with a summary: figures and finding codes, without the video, file name, names or body points. “Share report” makes a picture on the device and sends it only where you choose."
 };

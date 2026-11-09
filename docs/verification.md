@@ -71,6 +71,8 @@ npm run e2e -- --fixtures work/fixtures
 # отказы декодера (телефоны): открытие, пропажа посреди разбора, плеер
 node scripts/qa-decoder.mjs --clip work/fixtures/fuette.webm
 node scripts/qa-firefox.mjs   # расширение Firefox в отдельном профиле
+# режим тренера (Coach Desk Lite): плашка, сводка в ссылке t.me / web.telegram.org, история, карточка PNG
+node scripts/qa-coach.mjs --boxing work/fixtures/chunk_001.webm --rg work/fixtures/jump-s-progibom.webm
 ```
 
 `work/fixtures/cases.json` описывает ролики и настройки; скриншоты и отчёты — в `artifacts/e2e/` (флаг `--dump` сохраняет полный отчёт JSON). Новый ролик для E2E:

@@ -223,5 +223,17 @@ export const ro: Record<string, string> = {
 "privacy.persisted": "Stocarea permanentă este permisă.", "privacy.notPersisted": "Browserul poate șterge istoricul când lipsește spațiu — exportă ce contează.",
 "pwa.preparing": "Pregătim modul offline", "pwa.ready": "Gata fără internet", "pwa.extension": "Extensie locală", "pwa.noCache": "Cache-ul offline nu este disponibil",
 "pwa.notReadyOffline": "Aplicația nu a confirmat încă disponibilitatea offline. Modelul poate lipsi.", "pwa.update": "Este disponibilă o versiune nouă a aplicației.", "pwa.updateApply": "Actualizează",
-"pwa.updateLater": "Mai târziu", "pwa.updateAfter": "Actualizarea se aplică după finalul analizei."
+"pwa.updateLater": "Mai târziu", "pwa.updateAfter": "Actualizarea se aplică după finalul analizei.",
+"coach.for": "Analiză pentru: {name}", "coach.forAthlete": "Analiză pentru un sportiv", "coach.forSelf": "Analiză pentru „Progresul meu”",
+"coach.hint": "Alege un videoclip și pornește analiza. Apoi „Salvează în fișă” readuce rezultatul în Coach Desk Lite din Telegram.", "coach.exit": "Mod obișnuit", "coach.exited": "Modul antrenor este oprit: analizorul funcționează ca de obicei.",
+"coach.panelText": "Coach Desk Lite se deschide în Telegram cu această analiză. Se transmit doar indicatorii și concluziile principale. Raportul complet se salvează în istoricul acestui dispozitiv.", "coach.desktopHint": "„Deschide în Telegram” dacă ai Telegram Desktop; „Telegram web” funcționează în browser, fără instalare.", "coach.save": "Salvează în fișă",
+"coach.openApp": "Deschide în Telegram", "coach.openWeb": "Deschide în Telegram web", "coach.what": "Ce se transmite",
+"coach.figures": "Indicatori: {list}.", "coach.findings": "Concluzii: {list}.", "coach.none": "niciunul",
+"coach.trimmed": "Nu a încăput în linkul Telegram: {list}.", "coach.notSent": "Nu se transmit: videoclipul, numele fișierului, numele sportivului, cadrele și punctele corpului.", "coach.opened": "Se deschide Telegram. Dacă întreabă, confirmă pornirea Coach Desk Lite.",
+"coach.error": "Nu s-a putut pregăti rezumatul: {reason}", "share.button": "Distribuie raportul", "share.eyebrow": "FIȘA RAPORTULUI",
+"share.title": "Distribuie raportul", "share.text": "Imaginea se creează pe acest dispozitiv: un cadru cu scheletul, indicatorii și concluziile principale. Trimite-o sportivului în chat sau salveaz-o.", "share.making": "Se pregătește…",
+"share.blur": "Estompează videoclipul (scheletul rămâne clar)", "share.noVideo": "Niciun videoclip atașat: imaginea arată doar scheletul.", "share.share": "Distribuie",
+"share.download": "Descarcă PNG", "share.unsupported": "Aici fișierele nu pot fi distribuite direct: descarcă imaginea și trimite-o din galerie sau din descărcări.", "share.downloaded": "Imaginea a fost salvată în descărcări.",
+"share.failed": "Imaginea nu a putut fi creată.", "card.title": "Analiza tehnicii", "card.coverage": "postură în {pct}% din cadre",
+"card.footer": "Analizat pe dispozitiv. Videoclipul nu a fost încărcat nicăieri.", "privacy.p5": "Modul antrenor pornește doar când analizorul este deschis din Coach Desk Lite în Telegram. „Salvează în fișă” îi dă lui Telegram un link cu un rezumat: indicatori și coduri de concluzii, fără videoclip, numele fișierului, nume sau punctele corpului. „Distribuie raportul” creează o imagine pe dispozitiv și o trimite doar unde alegi tu."
 };
