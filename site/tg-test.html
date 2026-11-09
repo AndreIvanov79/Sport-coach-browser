@@ -86,7 +86,8 @@ input[type=file]{margin-top:6px;color:var(--muted);max-width:100%}
     apiVersion: inTelegram ? tg.version : null,
     start_param: inTelegram ? (tg.initDataUnsafe.start_param ?? null) : null,
     url: location.href.split("#")[0],
-    hash: location.hash || null,
+    // tgWebAppData is a signed login for the bot: never print it.
+    hash: location.hash ? location.hash.replace(/tgWebAppData=[^&]*/, "tgWebAppData=[скрыто]").replace(/tgWebAppThemeParams=[^&]*/, "tgWebAppThemeParams=…") : null,
     userAgent: ua,
     standalone: matchMedia("(display-mode: standalone)").matches,
     webShareFiles: !!(navigator.canShare && navigator.canShare({ files: [new File([""], "t.png", { type: "image/png" })] })),
@@ -108,9 +109,11 @@ input[type=file]{margin-top:6px;color:var(--muted);max-width:100%}
   };
 
   const code = "t" + Date.now().toString(36);
-  document.getElementById("back-tme").onclick = () => { log("назад через t.me, код " + code); location.href = "https://t.me/" + BOT + "?startapp=" + code; };
+  try { const last = sessionStorage.getItem("tg-test-back"); if (last) log("до этого: " + last); } catch {}
+  const remember = text => { try { sessionStorage.setItem("tg-test-back", text); } catch {} };
+  document.getElementById("back-tme").onclick = () => { const t = "назад через t.me, код " + code; log(t); remember(t); location.href = "https://t.me/" + BOT + "?startapp=" + code; };
   document.getElementById("back-web").onclick = () => {
-    log("назад через веб-Telegram, код " + code);
+    const t = "назад через веб-Telegram, код " + code; log(t); remember(t);
     location.href = "https://web.telegram.org/k/#?tgaddr=" + encodeURIComponent("tg://resolve?domain=" + BOT + "&startapp=" + code);
   };
 
