@@ -71,6 +71,8 @@ await fs.mkdir(out + "/privacy", { recursive: true }); await fs.mkdir(out + "/te
 for (const sport of SPORTS) await fs.cp("dist/" + sport + "/pwa", out + "/" + sport, { recursive: true });
 await fs.copyFile("site/site.css", out + "/site.css");
 for (const page of ["privacy", "terms"]) await fs.writeFile(out + "/" + page + "/index.html", fill(await fs.readFile("site/" + page + ".html", "utf8"), config));
+// Diagnostic page for the Telegram Mini App ↔ browser hand-off (coach-lite SPEC, section 3); not linked, noindex.
+await fs.mkdir(out + "/tg-test", { recursive: true }); await fs.copyFile("site/tg-test.html", out + "/tg-test/index.html");
 await fs.writeFile(out + "/index.html", landing());
 await fs.writeFile(out + "/404.html", notFound());
 await fs.writeFile(out + "/.nojekyll", "");

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Telegram test · Sport Coach</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:#121619;--panel:#1a2023;--line:#2c3437;--text:#e9eeeb;--muted:#93a09e;--accent:#c6ef73;--bad:#ff8a7a;color-scheme:dark;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text)}
+main{max-width:640px;margin:0 auto;padding:16px 16px 48px}
+h1{font-size:20px;margin:4px 0 4px}p{color:var(--muted);margin:0 0 14px;font-size:14px;line-height:1.5}
+section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0}
+h2{font-size:15px;margin:0 0 10px}
+button{font:inherit;font-size:15px;width:100%;text-align:left;margin:6px 0;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:#222a2d;color:var(--text);cursor:pointer}
+button:active{background:#2c3639}
+.row{display:flex;gap:8px}.row button{flex:1}
+pre{white-space:pre-wrap;word-break:break-word;font-size:12px;line-height:1.45;background:#0d1012;border-radius:10px;padding:10px;margin:8px 0 0;max-height:320px;overflow:auto}
+video{width:100%;border-radius:10px;margin-top:8px;background:#000;display:none}
+.ok{color:var(--accent)}.bad{color:var(--bad)}
+label.file{display:block;margin:6px 0;padding:12px 14px;border-radius:10px;border:1px dashed var(--line);color:var(--muted)}
+input[type=file]{margin-top:6px;color:var(--muted);max-width:100%}
+</style>
+</head>
+<body>
+<main>
+<h1 id="title">Проверка связки Telegram ↔ браузер</h1>
+<p id="where"></p>
+
+<section>
+<h2>1. Где открыта страница</h2>
+<pre id="env"></pre>
+</section>
+
+<section id="tg-actions" hidden>
+<h2>2. Открыть эту страницу во внешнем браузере</h2>
+<p>Проверяем, куда ведёт <code>openLink</code>: в Chrome / Safari или во встроенный браузер Telegram.</p>
+<button data-open="chrome">Открыть с try_browser: chrome</button>
+<button data-open="">Открыть без try_browser</button>
+</section>
+
+<section id="ext-actions" hidden>
+<h2>2. Вернуться в Telegram со «сводкой»</h2>
+<p>Проверяем обратную ссылку. В Mini App в пункте 1 должно появиться <code>start_param</code> с тем же кодом.</p>
+<button id="back-tme">Вернуть через t.me (телефон, Telegram Desktop)</button>
+<button id="back-web">Вернуть через веб-Telegram (компьютер)</button>
+</section>
+
+<section>
+<h2>3. Камера</h2>
+<button id="cam">Включить камеру (getUserMedia)</button>
+<video id="video" playsinline muted></video>
+</section>
+
+<section>
+<h2>4. Выбор видео</h2>
+<label class="file">Видео из галереи / файлов<br><input id="file" type="file" accept="video/*"></label>
+<label class="file">Снять камерой (capture)<br><input id="capture" type="file" accept="video/*" capture="environment"></label>
+</section>
+
+<section>
+<h2>5. Отдать файл</h2>
+<p>Картинка 400×240 создаётся прямо здесь, как будущая карточка отчёта.</p>
+<div class="row"><button id="share">Поделиться файлом</button><button id="download">Скачать файл</button></div>
+</section>
+
+<section>
+<h2>6. Результат</h2>
+<p>Нажмите «Скопировать» и пришлите текст в чат.</p>
+<button id="copy">Скопировать результат</button>
+<pre id="log"></pre>
+</section>
+</main>
+<script>
+(() => {
+  const BOT = "coach_desk_lite_bot";
+  const tg = window.Telegram && window.Telegram.WebApp;
+  const inTelegram = !!(tg && tg.initData);
+  const lines = [];
+  const log = (text, ok) => { lines.push((ok === true ? "✓ " : ok === false ? "✗ " : "• ") + text); const el = document.getElementById("log"); el.textContent = lines.join("\n"); el.scrollTop = el.scrollHeight; };
+  const ua = navigator.userAgent;
+  const env = {
+    place: inTelegram ? "внутри Telegram (Mini App)" : "обычный браузер",
+    platform: inTelegram ? tg.platform : null,
+    apiVersion: inTelegram ? tg.version : null,
+    start_param: inTelegram ? (tg.initDataUnsafe.start_param ?? null) : null,
+    url: location.href.split("#")[0],
+    hash: location.hash || null,
+    userAgent: ua,
+    standalone: matchMedia("(display-mode: standalone)").matches,
+    webShareFiles: !!(navigator.canShare && navigator.canShare({ files: [new File([""], "t.png", { type: "image/png" })] })),
+    getUserMedia: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
+    compressionStream: typeof CompressionStream === "function"
+  };
+  document.getElementById("env").textContent = JSON.stringify(env, null, 2);
+  document.getElementById("where").textContent = inTelegram ? "Сейчас вы внутри Telegram." : "Сейчас вы в обычном браузере.";
+  log("место: " + env.place + (inTelegram ? ", platform=" + env.platform + ", API " + env.apiVersion + ", start_param=" + env.start_param : ""));
+  log("браузер: " + ua);
+  if (inTelegram) { tg.ready(); tg.expand(); document.getElementById("tg-actions").hidden = false; }
+  else document.getElementById("ext-actions").hidden = false;
+
+  for (const b of document.querySelectorAll("[data-open]")) b.onclick = () => {
+    const url = location.origin + location.pathname + "#from=miniapp&t=" + Date.now().toString(36);
+    const browser = b.dataset.open;
+    log("openLink " + (browser ? "try_browser=" + browser : "без try_browser"));
+    try { tg.openLink(url, browser ? { try_browser: browser } : undefined); } catch (e) { log("openLink ошибка: " + e, false); }
+  };
+
+  const code = "t" + Date.now().toString(36);
+  document.getElementById("back-tme").onclick = () => { log("назад через t.me, код " + code); location.href = "https://t.me/" + BOT + "?startapp=" + code; };
+  document.getElementById("back-web").onclick = () => {
+    log("назад через веб-Telegram, код " + code);
+    location.href = "https://web.telegram.org/k/#?tgaddr=" + encodeURIComponent("tg://resolve?domain=" + BOT + "&startapp=" + code);
+  };
+
+  document.getElementById("cam").onclick = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+      const v = document.getElementById("video"); v.srcObject = stream; v.style.display = "block"; await v.play();
+      const s = stream.getVideoTracks()[0].getSettings();
+      log("камера работает: " + s.width + "×" + s.height, true);
+      setTimeout(() => { stream.getTracks().forEach(t => t.stop()); v.style.display = "none"; }, 4000);
+    } catch (e) { log("камера: " + (e.name || e) + " " + (e.message || ""), false); }
+  };
+
+  const onFile = (id, label) => document.getElementById(id).onchange = e => {
+    const f = e.target.files[0]; if (!f) { log(label + ": ничего не выбрано", false); return; }
+    log(label + ": " + f.type + ", " + (f.size / 1048576).toFixed(1) + " МБ", true);
+    const v = document.createElement("video"); v.muted = true; v.preload = "metadata"; v.src = URL.createObjectURL(f);
+    v.onloadedmetadata = () => log(label + ": видео читается, " + v.videoWidth + "×" + v.videoHeight + ", " + v.duration.toFixed(1) + " с", true);
+    v.onerror = () => log(label + ": браузер не может прочитать это видео", false);
+  };
+  onFile("file", "выбор видео"); onFile("capture", "съёмка камерой");
+
+  const card = () => new Promise(resolve => {
+    const c = document.createElement("canvas"); c.width = 400; c.height = 240; const x = c.getContext("2d");
+    x.fillStyle = "#121619"; x.fillRect(0, 0, 400, 240); x.fillStyle = "#c6ef73"; x.font = "bold 26px system-ui"; x.fillText("Sport Coach", 24, 56);
+    x.fillStyle = "#e9eeeb"; x.font = "18px system-ui"; x.fillText("Тестовая карточка отчёта", 24, 96); x.fillText(new Date().toLocaleString(), 24, 128);
+    c.toBlob(b => resolve(new File([b], "sport-coach-test.png", { type: "image/png" })), "image/png");
+  });
+  document.getElementById("share").onclick = async () => {
+    const file = await card();
+    if (!navigator.canShare || !navigator.canShare({ files: [file] })) { log("«Поделиться» с файлом не поддерживается здесь", false); return; }
+    try { await navigator.share({ files: [file], title: "Sport Coach" }); log("«Поделиться» открылось, файл отдан", true); }
+    catch (e) { log("«Поделиться»: " + e.name + (e.name === "AbortError" ? " (закрыли окно)" : ""), e.name === "AbortError" ? undefined : false); }
+  };
+  document.getElementById("download").onclick = async () => {
+    const file = await card(), a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = file.name; document.body.append(a); a.click(); a.remove();
+    log("скачивание запущено (проверьте, появился ли файл)");
+  };
+
+  document.getElementById("copy").onclick = async () => {
+    const text = "Телеграм-тест\n" + JSON.stringify(env, null, 1) + "\n" + lines.join("\n");
+    try { await navigator.clipboard.writeText(text); log("скопировано", true); }
+    catch { const t = document.createElement("textarea"); t.value = text; document.body.append(t); t.select(); document.execCommand("copy"); t.remove(); log("скопировано (запасной способ)", true); }
+  };
+})();
+</script>
+</body>
+</html>
