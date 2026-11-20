@@ -1,4 +1,5 @@
 export const ru: Record<string, string> = {
+"android.return": "Вернуть измерения в SportCoach",
 "app.titleSuffix": "Локальный видеоанализ", "app.tagline": "ЛОКАЛЬНЫЙ ВИДЕОАНАЛИЗ", "app.workspace": "РАБОЧЕЕ ПРОСТРАНСТВО",
 "nav.analysis": "Анализ видео", "nav.live": "Live-тренировка", "nav.history": "Моя история", "nav.guide": "Как снимать",
 "app.privacyTitle": "Ваше видео. Только у вас.", "app.privacyText": "Обработка на устройстве. Без загрузки на сервер.", "app.privacyMore": "О данных и хранении",

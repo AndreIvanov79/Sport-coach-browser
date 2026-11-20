@@ -16,10 +16,12 @@ import { personGeometry } from "./core/track.ts";
 import { idle, refreshPwaTexts, setupPwa } from "./ui/pwa.ts";
 import { bindFullscreen } from "./ui/fullscreen.ts";
 import { watchFrozenFrames } from "./ui/stall.ts";
+import { androidWorkout, androidResult } from "./handoff/android-workout.ts";
 import { endCoachMode, readCoachContext } from "./handoff/coach.ts";
 import { renderCoachBanner, renderCoachPanel } from "./handoff/coach-view.ts";
 import { openShareDialog } from "./ui/share-card.ts";
 const profile = profiles[__SPORT__], app = document.querySelector<HTMLDivElement>("#app")!;
+const workout = androidWorkout(location.hash, profile.id);
 const extension = location.protocol.endsWith("-extension:");
 const models = availableModels();
 const SETTINGS = "sport-coach-" + profile.id + "-settings";
@@ -30,11 +32,15 @@ const defaults: Settings = { exercise: "auto", fps: profile.defaultFps, threshol
 let settings: Settings = defaults;
 try { const saved = JSON.parse(localStorage.getItem(SETTINGS) ?? "{}"); settings = { ...defaults, ...saved }; if (saved.v !== 2) { settings.model = defaultModel; settings.v = 2; } } catch { /* defaults */ }
 if (!models.some(m => m.id === settings.model)) settings.model = defaultModel;
-const saveSettings = () => { try { localStorage.setItem(SETTINGS, JSON.stringify(settings)); } catch { /* ignore */ } };
+if (workout) {
+ settings = { ...settings, exercise: "squat" };
+}
+const saveSettings = () => { if (workout) return; try { localStorage.setItem(SETTINGS, JSON.stringify(settings)); } catch { /* ignore */ } };
 let file: File | null = null, objectUrl: string | null = null, report: Report | null = null, controller: AbortController | null = null;
 let durationOverride: number | undefined, frameLoop = 0, live: LiveSession | null = null, playhead: ((time: number) => void) | null = null;
 let source: Report["source"] = "file", view: "analysis" | "live" | "history" = "analysis";
 document.documentElement.style.setProperty("--accent", profile.accent);
+if (workout?.lang) setLang(workout.lang, false);
 document.documentElement.lang = getLang();
 const ANGLES: Record<string, [number, number, number][]> = {
  fitness: [[23, 25, 27], [24, 26, 28], [11, 23, 25], [12, 24, 26], [11, 13, 15], [12, 14, 16]],
@@ -106,7 +112,7 @@ app.innerHTML = `
 const player = $<HTMLVideoElement>("player"), overlay = $<HTMLCanvasElement>("pose-overlay");
 // Coach mode: opened from the Coach Desk Lite Mini App with #coach=1&a=…&n=…&ret=… (coach-lite SPEC, 6.1).
 // The fragment is dropped from the address bar so the athlete's name does not stay in bookmarks; the tab keeps it.
-let coach = readCoachContext(location.hash);
+let coach = workout ? null : readCoachContext(location.hash);
 if (location.hash.startsWith("#coach=")) history.replaceState(null, "", location.pathname + location.search);
 function showCoach() {
  if (!coach) { $("coach-host").hidden = true; return; }
@@ -204,7 +210,7 @@ $<HTMLInputElement>("threshold").oninput = () => { settings.threshold = Number($
 $("exercise").onchange = () => { settings.exercise = $<HTMLSelectElement>("exercise").value; saveSettings(); movementHint(); };
 $("fps").onchange = () => { settings.fps = Number($<HTMLSelectElement>("fps").value); saveSettings(); };
 $("model").onchange = () => { settings.model = $<HTMLSelectElement>("model").value as ModelId; saveSettings(); modelHint(); };
-$("lang").onchange = () => { setLang($<HTMLSelectElement>("lang").value as Lang); applyI18n(); renderCurrent(); if (view === "history") void showHistory(); };
+$("lang").onchange = () => { setLang($<HTMLSelectElement>("lang").value as Lang, !workout); applyI18n(); renderCurrent(); if (view === "history") void showHistory(); };
 // Player: overlay, angle labels, slow motion, frame stepping, chart playhead.
 // The skeleton follows the frame actually on screen (requestVideoFrameCallback), not currentTime: the clock runs
 // a frame or two apart from the picture, which made fast punches and kicks look as if the skeleton jumped.
@@ -336,6 +342,14 @@ function renderCurrent() {
   reanalyze: r.source === "live" && file ? () => void runAnalysis(file!, "camera") : null
  });
  playhead = api.playhead;
+ if (workout) {
+  const url = androidResult(r, workout);
+  if (url) {
+   const back = document.createElement("a");
+   back.className = "small-button"; back.textContent = t("android.return"); back.href = url;
+   $("report-section").querySelector(".report-actions")?.prepend(back);
+  }
+ }
  if (coach) void renderCoachPanel($("report-section"), r, coach, { save: () => save(true), share: () => openShareDialog(r, file ? player : null) });
  if (file) { $("video-label").textContent = t("app.labelSkeleton"); $("playback-note").textContent = t("app.noteSkeleton"); startOverlay(); }
 }

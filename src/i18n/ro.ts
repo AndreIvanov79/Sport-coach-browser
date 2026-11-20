@@ -1,4 +1,5 @@
 export const ro: Record<string, string> = {
+"android.return": "Trimite măsurătorile în SportCoach",
 "app.titleSuffix": "Analiză video pe dispozitiv", "app.tagline": "ANALIZĂ VIDEO LOCALĂ", "app.workspace": "SPAȚIU DE LUCRU",
 "nav.analysis": "Analiză video", "nav.live": "Antrenament live", "nav.history": "Istoricul meu", "nav.guide": "Cum filmez",
 "app.privacyTitle": "Video-ul tău. Doar al tău.", "app.privacyText": "Procesare pe dispozitiv. Fără încărcare pe server.", "app.privacyMore": "Date și stocare",

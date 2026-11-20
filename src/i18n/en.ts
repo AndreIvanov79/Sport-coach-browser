@@ -1,4 +1,5 @@
 export const en: Record<string, string> = {
+"android.return": "Return measurements to SportCoach",
 "app.titleSuffix": "On-device video analysis", "app.tagline": "ON-DEVICE VIDEO ANALYSIS", "app.workspace": "WORKSPACE",
 "nav.analysis": "Video analysis", "nav.live": "Live workout", "nav.history": "My history", "nav.guide": "How to film",
 "app.privacyTitle": "Your video. Only yours.", "app.privacyText": "Processed on your device. Never uploaded.", "app.privacyMore": "Data and storage",

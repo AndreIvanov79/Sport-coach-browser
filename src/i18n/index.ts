@@ -16,7 +16,7 @@ export function detectLang(): Lang {
 }
 let lang: Lang = typeof window === "undefined" ? "ru" : detectLang();
 export const getLang = () => lang;
-export function setLang(next: Lang) { lang = next; try { localStorage.setItem(STORE, next); } catch { /* ignore */ } if (typeof document !== "undefined") document.documentElement.lang = next; }
+export function setLang(next: Lang, persist = true) { lang = next; try { if (persist) localStorage.setItem(STORE, next); } catch { /* ignore */ } if (typeof document !== "undefined") document.documentElement.lang = next; }
 export function t(key: string, params?: Record<string, string | number | undefined>): string {
  const s = DICTS[lang][key] ?? DICTS.ru[key] ?? key;
  return params ? s.replace(/\{(\w+)\}/g, (_, k) => params[k] !== undefined ? String(params[k]) : "") : s;
